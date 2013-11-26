@@ -29,8 +29,8 @@ public class Oven extends LhingsDevice {
 	}
 
 	@Override
-	public void init() {
-		// In init() you perform all the initialization tasks your device needs
+	public void setup() {
+		// In setup() you perform all the initialization tasks your device needs
 		System.out.println("Oven initialization completed...");
 	}
 

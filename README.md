@@ -1,7 +1,5 @@
-java_lhings_library
-===================
-
 Lhings library for Java based devices
+======================================
 
 Library and basic examples to connect your Java based device to Lhings:
 http://support.lhings.com/

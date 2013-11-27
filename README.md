@@ -16,7 +16,7 @@ Bear in mind that you will also need to download the dependencies of the library
 
 * JSON for Java reference implementation - https://github.com/douglascrockford/JSON-java
 
-For your convenience, a zip file with all the dependencies is included in the release. You can find further help in:
+For your convenience, a zip file with all the dependencies is included in the release. Also you can read the [javadoc](http://lhings.github.io/java_lhings_library/). You can find further help in:
 
 
 * Community & Help:

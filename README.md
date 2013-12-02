@@ -4,6 +4,8 @@ Lhings library for Java based devices
 Library and basic examples to connect your Java based device to Lhings:
 http://support.lhings.com/
 
+Currently **only Java 7** is supported.
+
 Bear in mind that you will also need to download the dependencies of the library:
 
 * Apache Commons Codec version => 1.6 - http://commons.apache.org/proper/commons-codec/download_codec.cgi

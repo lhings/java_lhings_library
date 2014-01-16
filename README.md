@@ -4,7 +4,7 @@ Lhings library for Java based devices
 Library and basic examples to connect your Java based device to Lhings:
 http://support.lhings.com/
 
-Currently **only Java 7** is supported.
+The library needs Java 5 or newer.
 
 Bear in mind that you will also need to download the dependencies of the library:
 

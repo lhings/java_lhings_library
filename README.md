@@ -6,19 +6,9 @@ http://support.lhings.com/
 
 The library needs Java 5 or newer.
 
-Bear in mind that you will also need to download the dependencies of the library:
+Maven is used for development, compile with `mvn compile`. To generate a jar file, execute `mvn package`.
 
-* Apache Commons Codec version => 1.6 - http://commons.apache.org/proper/commons-codec/download_codec.cgi
-
-* Apache Commons Logging version => 1.1.3 - http://commons.apache.org/proper/commons-logging/download_logging.cgi
-
-* Apache Http Client version => 4.3.1, including fluent-hc.jar, httpclient.jar, httpclient-cache.jar, httpcore.jar and httpmime.jar - http://hc.apache.org/downloads.cgi
-
-* Java UUID generator version => 3.1.3 - http://wiki.fasterxml.com/JugDownload
-
-* JSON for Java reference implementation - https://github.com/douglascrockford/JSON-java
-
-For your convenience, a zip file with all the dependencies is included in the release. Also you can read the [javadoc](http://lhings.github.io/java_lhings_library/). You can find further help in:
+Read the [javadoc](http://lhings.github.io/java_lhings_library/). You can find further help in:
 
 
 * Community & Help:
@@ -31,5 +21,8 @@ For your convenience, a zip file with all the dependencies is included in the re
 	Twitter: http://twitter.com/lhings - Follow us: @Lhings
 
 * Blog: http://blog.lhings.com
+
+This library is licensed under the terms of the [Apache License v2.0](http://www.apache.org/licenses/LICENSE-2.0.html).
+
 
 Enjoy!

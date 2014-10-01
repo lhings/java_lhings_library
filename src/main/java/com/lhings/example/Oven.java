@@ -66,7 +66,7 @@ public class Oven extends LhingsDevice {
 	}
 
 	public static void main(String[] args) throws InterruptedException, IOException, LhingsException{
-		LhingsDevice device = new Oven("user@example.com", "password", "My Java Oven");
+		LhingsDevice device = new Oven("user@example.com", "mypassword", "My Lhings Java Oven");
 		device.setLoopFrequency(20);
 		device.start();
 		// stop device after 6 minutes

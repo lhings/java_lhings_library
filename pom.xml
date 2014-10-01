@@ -8,7 +8,30 @@
 	<packaging>jar</packaging>
 
 	<name>lhings-java</name>
+	<description>Java library for device connectivity with Lhings. Lhings is a cloud platform that allows you to retrieve information from your devices and remotely control them in a very easy way. Learn more at http://support.lhings.com.</description>
 	<url>http://maven.apache.org</url>
+
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+
+	<scm>
+		<url>https://github.com/lhings/java_lhings_library</url>
+		<connection>scm:git:https://github.com/lhings/java_lhings_library</connection>
+	</scm>
+
+	<developers>
+		<developer>
+			<id>jose</id>
+			<name>Jose Antonio Lorenzo</name>
+			<email>jose@lhings.com</email>
+			<organization>Lyncos Technologies S. L.</organization>
+			<organizationUrl>http://www.lyncos.com</organizationUrl>
+		</developer>
+	</developers>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

@@ -19,17 +19,8 @@ package com.lhings.java.model;
 import java.io.Serializable;
 
 
-//DONDE terminar de añadir el modelo, añadiendo las clases que faltan y si es necesario haciendo "mocks" de algunas
-// para que no se complique demasiado el tema
-
-/**
- * The persistent class for the STATE_VARS database table.
- * 
- */
 public class StateVar implements Serializable {
 	private static final long serialVersionUID = 1L;
-
-	private Long pk;
 
 	private String name;
 	
@@ -37,7 +28,6 @@ public class StateVar implements Serializable {
 
 	private String type;
 
-	//bi-directional many-to-one association to Device
 	private Device device;
 
 	
@@ -75,16 +65,6 @@ public class StateVar implements Serializable {
 
 	public void setDevice(Device device) {
 		this.device = device;
-	}
-
-
-	public Long getPk() {
-		return pk;
-	}
-
-
-	public void setPk(Long pk) {
-		this.pk = pk;
 	}
 
 

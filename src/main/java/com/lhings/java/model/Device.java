@@ -21,7 +21,7 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * The persistent class for the DEVICE database table.
+ * This class provides information about a given device.
  * 
  */
 

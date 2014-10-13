@@ -12,91 +12,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-
-
 package com.lhings.java.model;
 
 import java.io.Serializable;
 import java.util.List;
 
-
-
-
 /**
- * The persistent class for the ACTION database table.
- * 
+ * Model for the actions.
+ *
  */
-
 public class Action implements Serializable {
-	private static final long serialVersionUID = 1L;
 
+    public static final int NO_PAYLOAD = -1;
 
-	private Long pk;
+    private static final long serialVersionUID = 1L;
 
-//	private List<Rule> rules;
-	
-	private String name;
-	
+    private String name;
 
-	private String description;
-	
+    private String description;
 
-	private List<Argument> inputs;
+    private List<Argument> inputs;
 
-	
-	// the value of this field has to be generated on the fly before JSON serialization
-//	private String controlURL;
+    private boolean payloadNeeded = false;
+    
+    public Action(String name, String description, List<Argument> inputs,
+            List<Argument> outputs) {
+        super();
+        this.name = name;
+        this.description = description;
+        this.inputs = inputs;
+    }
 
-	public Action(String name, String description, List<Argument> inputs,
-			List<Argument> outputs) {
-		super();
-		this.name = name;
-		this.description = description;
-		this.inputs = inputs;
-	}
+    public Action() {
+    }
 
-	/**
-	 * this method sets the value of the transient fields
-	 */
-//	public void updateTransientFields(){
-//		controlURL = "/api/v1/devices/"+this.device.getUuidString()+"/"+this.name;
-//	}
-	
-	public Action() {
-	}
+    public String getName() {
+        return this.name;
+    }
 
-	public Long getPk() {
-		return this.pk;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public void setPk(Long pk) {
-		this.pk = pk;
-	}
+    public String getDescription() {
+        return description;
+    }
 
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-	public String getName() {
-		return this.name;
-	}
+    public List<Argument> getInputs() {
+        return inputs;
+    }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public void setInputs(List<Argument> inputs) {
+        this.inputs = inputs;
+    }
 
-	public String getDescription() {
-		return description;
-	}
+    public boolean isPayloadNeeded() {
+        return payloadNeeded;
+    }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
-
-	public List<Argument> getInputs() {
-		return inputs;
-	}
-
-	public void setInputs(List<Argument> inputs) {
-		this.inputs = inputs;
-	}
-
+    public void setPayloadNeeded(boolean payloadNeeded) {
+        this.payloadNeeded = payloadNeeded;
+    }
 
 }

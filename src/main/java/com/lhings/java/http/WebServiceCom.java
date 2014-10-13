@@ -286,17 +286,17 @@ public final class WebServiceCom {
 			String statusCompType = statusComponent.getString("type");
 			Object statusCompValue;
 			if (statusCompType.equals("integer"))
-				statusCompValue = Integer.valueOf(statusComponent
-						.getInt("value"));
+				statusCompValue = statusComponent
+                                        .getInt("value");
 			else if (statusCompType.equals("float"))
-				statusCompValue = Float.valueOf((float) statusComponent
-						.getDouble("value"));
+				statusCompValue = (float) statusComponent
+                                        .getDouble("value");
 			else if (statusCompType.equals("timestamp"))
 				statusCompValue = new Date(
 						(long) statusComponent.getInt("value") * 1000);
 			else if (statusCompType.equals("boolean"))
-				statusCompValue = Boolean.valueOf(statusComponent
-						.getBoolean("value"));
+				statusCompValue = statusComponent
+                                        .getBoolean("value");
 			else
 				statusCompValue = statusComponent.getString("value");
 			returnValue.put(statusCompName, statusCompValue);

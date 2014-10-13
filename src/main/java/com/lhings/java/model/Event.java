@@ -18,10 +18,6 @@ package com.lhings.java.model;
 
 import java.io.Serializable;
 
-/**
- * The persistent class for the EVENT database table.
- * 
- */
 public class Event implements Serializable {
 	private static final long serialVersionUID = 1L;
 

@@ -13,7 +13,6 @@
  * limitations under the License. 
  */
 
-
 package com.lhings.java.annotations;
 
 import java.lang.annotation.Documented;
@@ -22,16 +21,22 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** 
- * This annotation is used to define the events of your device. By convention, it
- * should annotate fields of type String. You can make your device send events
- * defined with this annotation using the method {@link com.lhings.java.LhingsDevice#sendEvent(java.lang.String) LhingsDevice.sendEvent()}.
- * The name parameter is optional, if not provided the name of the field is used instead. Only alphanumeric characters
- * and underscore can be used for the name of the event.
+/**
+ * <code>@Payload</code> annotation is used to specify that the parameter of a method
+ * annotated with <code>@Action</code> should carry the raw payload of the event. When 
+ * the corresponding action is linked to an event through a rule, the library will store
+ * the raw payload of the event in the parameter annotated with <code>@Payload</code>.
+ * 
+ * Currently for an action to receive payload it must have only one parameter and it
+ * has to be annotated with payload. In this case the <code>argumentNames</code>
+ * parameter of the {@link com.lhings.java.annotations.Action @Action} annotation
+ * must be empty. <code>@Payload</code> annotation will not work as expected if the
+ * method has multiple parameters.
+ * 
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD})
+@Target({ElementType.PARAMETER})
 @Documented
-public @interface Event {
-	String name() default "";
+public @interface Payload {
+    
 }

@@ -19,10 +19,7 @@ package com.lhings.java.model;
 import java.io.Serializable;
 
 
-/**
- * Entity implementation class for Entity: Argument
- *
- */
+
 
 public class Argument implements Serializable {
 
@@ -30,27 +27,13 @@ public class Argument implements Serializable {
 	
 	private String type;
 	
-//	private StateVar relatedStateVariable;
-	
-//	private Action action;
-
-//	private String relatedStateVariableAsString;
-	
 	private static final long serialVersionUID = 1L;
 
 	public Argument(String name, String type) {
 		super();
 		this.name = name;
 		this.type = type;
-//		this.relatedStateVariable = relatedStateVariable;
 	}
-	
-//	public Argument(String name, String type, String relatedStateVariable) {
-//		super();
-//		this.name = name;
-//		this.type = type;
-//		this.relatedStateVariableAsString = relatedStateVariable;
-//	}
 	
 	public Argument() {
 		super();

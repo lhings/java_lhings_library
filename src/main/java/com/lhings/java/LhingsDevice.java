@@ -135,14 +135,14 @@ public abstract class LhingsDevice implements Runnable {
      * for the next time it is launched.
      *
      * @param username Username of the Lhings account.
-     * @param password Password of the account.
+     * @param apikey The apikey of the account, or its password. Any of them will work.
      * @param deviceName The name of the device.
      * @throws IOException If a network or connectivity error occurs.
      * @throws LhingsException
      */
-    public LhingsDevice(String username, String password, String deviceName)
+    public LhingsDevice(String username, String apikey, String deviceName)
             throws IOException, LhingsException {
-        this(username, password, (int) (Math.random() * 50000) + 1027,
+        this(username, apikey, (int) (Math.random() * 50000) + 1027,
                 deviceName);
     }
 
@@ -154,7 +154,7 @@ public abstract class LhingsDevice implements Runnable {
      * for the next time it is launched.
      *
      * @param username Username of the Lhings account.
-     * @param password Password of the account.
+     * @param apikey The apikey of the account, or its password. Any of them will work.
      * @param port The port the device will use to connect to the Internet for
      * non-http communications.
      * @param deviceName The name of the device.
@@ -163,13 +163,18 @@ public abstract class LhingsDevice implements Runnable {
      */
     public LhingsDevice(String username, String password, int port,
             String deviceName) throws IOException, LhingsException {
-        this.apiKey = WebServiceCom.getApiKey(username, password);
+    	if (password.matches("^[0-9abcdef]{8}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{12}?"))
+    		this.apiKey = password;
+    	else
+    		this.apiKey = WebServiceCom.getApiKey(username, password);
         this.port = port;
         this.name = deviceName;
         this.username = username;
         initDevice();
     }
 
+    
+    
     /**
      * Performs all operations needed before starting the device
      *
@@ -185,7 +190,6 @@ public abstract class LhingsDevice implements Runnable {
             log.info("Device was successfully registered with name " + name);
             updateProperties();
         }
-        postman = ListenerThread.getInstance(port, this);
         autoconfigure();
         setup();
     }
@@ -415,9 +419,11 @@ public abstract class LhingsDevice implements Runnable {
     /**
      * Start the device. The device starts session in Lhings and executes the
      * loop() method periodically.
+     * @throws LhingsException 
      */
-    public void start() {
+    public void start() throws LhingsException {
         running = true;
+        postman = ListenerThread.getInstance(port, this);
         (new Thread(this)).start();
         log.info("Device started");
     }

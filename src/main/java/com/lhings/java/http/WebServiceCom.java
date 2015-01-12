@@ -113,22 +113,28 @@ public final class WebServiceCom {
 		String json = response.getResponseBody();
 		int status = response.getStatusCode();
 		if (status == LHINGS_ERROR_HTTP_STATUS) {
-			int lhingsErrorCode = Integer.valueOf(new JSONObject(json)
-					.getInt("responseStatus"));
+			int lhingsErrorCode = new JSONObject(json).getInt("responseStatus");
 			String errorMessage = new JSONObject(json).getString("message");
 			switch (lhingsErrorCode) {
 			case LHINGS_V1_API_BAD_REQUEST_ERROR_CODE:
 				throw new BadRequestException(
-						"HTTP bad request error. Lhings API error code "
-								+ status + " - " + errorMessage);
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+								+ errorMessage);
 			case LHINGS_V1_API_UNAUTHORIZED_ERROR_CODE:
 				throw new UnauthorizedException(
-						"HTTP unauthorized error. Lhings API error code "
-								+ status + " - " + errorMessage);
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+								+ errorMessage);
+			case LHINGS_V1_API_NOT_FOUND_ERROR_CODE:
+				throw new DeviceDoesNotExistException(
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+								+ errorMessage);
 			default:
-				throw new LhingsException("HTTP error. Lhings API error code "
-						+ status + " - " + errorMessage);
+				throw new LhingsException("Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+						+ errorMessage);
 			}
+		} else if (status != 200 && status != 201) {
+			// HTTP error
+			throw new LhingsException("HTTP error. Code: " + status + " - " + response.getStatusMessage());
 		}
 		return json;
 	}
@@ -141,26 +147,28 @@ public final class WebServiceCom {
 		int status = response.getStatusCode();
 		String json = response.getResponseBody();
 		if (status == LHINGS_ERROR_HTTP_STATUS) {
-			int lhingsErrorCode = Integer.valueOf(new JSONObject(json)
-					.getInt("responseStatus"));
+			int lhingsErrorCode = new JSONObject(json).getInt("responseStatus");
 			String errorMessage = new JSONObject(json).getString("message");
 			switch (lhingsErrorCode) {
 			case LHINGS_V1_API_BAD_REQUEST_ERROR_CODE:
 				throw new BadRequestException(
-						"HTTP bad request error. Lhings API error code "
-								+ status + " - " + errorMessage);
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+								+ errorMessage);
 			case LHINGS_V1_API_UNAUTHORIZED_ERROR_CODE:
 				throw new UnauthorizedException(
-						"HTTP unauthorized error. Lhings API error code "
-								+ status + " - " + errorMessage);
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+								+ errorMessage);
 			case LHINGS_V1_API_NOT_FOUND_ERROR_CODE:
 				throw new DeviceDoesNotExistException(
-						"HTTP not found error. Lhings API error code " + status
-								+ " - " + errorMessage);
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+								+ errorMessage);
 			default:
-				throw new LhingsException("HTTP error. Lhings API error code "
-						+ status + " - " + errorMessage);
+				throw new LhingsException("Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+						+ errorMessage);
 			}
+		} else if (status != 200 && status != 201) {
+			// HTTP error
+			throw new LhingsException("HTTP error. Code: " + status + " - " + response.getStatusMessage());
 		}
 
 		return json;
@@ -242,20 +250,23 @@ public final class WebServiceCom {
 			switch (lhingsErrorCode) {
 			case LHINGS_V1_API_BAD_REQUEST_ERROR_CODE:
 				throw new BadRequestException(
-						"HTTP error. Lhings API error code " + status + " - "
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
 								+ errorMessage);
 			case LHINGS_V1_API_UNAUTHORIZED_ERROR_CODE:
 				throw new UnauthorizedException(
-						"HTTP error. Lhings API error code " + status + " - "
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
 								+ errorMessage);
 			case LHINGS_V1_API_NOT_FOUND_ERROR_CODE:
 				throw new DeviceDoesNotExistException(
-						"HTTP error. Lhings API error code " + status + " - "
+						"Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
 								+ errorMessage);
 			default:
-				throw new LhingsException("HTTP error. Lhings API error code "
-						+ status + " - " + errorMessage);
+				throw new LhingsException("Lhings API error. HTTP status " + status + ". Lhings error code " + lhingsErrorCode + " - "
+						+ errorMessage);
 			}
+		} else if (status != 200 && status != 201) {
+			// HTTP error
+			throw new LhingsException("HTTP error. Code: " + status + " - " + response.getStatusMessage());
 		}
 	}
 

@@ -6,9 +6,15 @@ http://support.lhings.com/
 
 The library needs Java 5 or newer.
 
-Maven is used for development, compile with `mvn compile`. To generate a jar file, execute `mvn package`.
+Maven is used for development, compile with `mvn compile`. To generate a jar file, execute `mvn package`. If you use Maven in your own project, you can use the Lhings library adding the following dependency to your pom.xml:
 
-Read the [javadoc](http://lhings.github.io/java_lhings_library/). You can find further help in:
+	<dependency>
+		<groupId>com.lhings.java</groupId>
+		<artifactId>lhings-java</artifactId>
+		<version>2.1</version>
+	</dependency>
+
+To learn how to develop with this library read the [quick start tutorial](http://support.lhings.com/Getting-started-tutorial.html) and the [javadoc](http://lhings.github.io/java_lhings_library/). You can find further help in:
 
 
 * Community & Help:

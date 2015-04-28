@@ -84,7 +84,7 @@ public abstract class LhingsDevice implements Runnable {
     private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
     private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
     private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
-    private static final String VERSION_STRING = "Lhings Java SDK v2.1 - ja008";
+    private static final String VERSION_STRING = "Lhings Java SDK v2.2 - ja009";
 
     private final Map<String, Method> actionMethods = new HashMap<String, Method>();
     private final Map<String, com.lhings.java.model.Action> actionDefinitions = new HashMap<String, com.lhings.java.model.Action>();
@@ -277,7 +277,19 @@ public abstract class LhingsDevice implements Runnable {
                     eventName = field.getName();
                 }
 
-                eventList.add(new com.lhings.java.model.Event(eventName));
+                com.lhings.java.model.Event eventToAdd = new com.lhings.java.model.Event(eventName);
+                
+                String[] componentNames = event.component_names();
+                String[] componentTypes = event.component_types();
+                if (componentNames.length != componentTypes.length){
+                	log.warn("Payload component list for event \"" + eventName + "\" is not valid: wrong number of component types provided."); 
+                } else {
+                	for (int j= 0; j< componentNames.length;j++){
+                		eventToAdd.getComponents().add(new Argument(componentNames[j], componentTypes[j]));
+                	}
+                }
+                
+                eventList.add(eventToAdd);
                 eventDefinitions.add(eventName);
             }
 

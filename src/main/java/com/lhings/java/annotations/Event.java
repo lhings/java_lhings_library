@@ -28,10 +28,20 @@ import java.lang.annotation.Target;
  * defined with this annotation using the method {@link com.lhings.java.LhingsDevice#sendEvent(java.lang.String) LhingsDevice.sendEvent()}.
  * The name parameter is optional, if not provided the name of the field is used instead. Only alphanumeric characters
  * and underscore can be used for the name of the event.
+ * 
+ * If this event will be sent with a <a href = "http://support.lhings.com/Event-Payload.html">structured payload</a>, 
+ * component_names and component_types arrays must be used to define its components. For instance, if the device is a car
+ * that sends an event called "fuel_low", and its payload has two components, "distance_for_refuelling" of type integer and
+ * "gps_position" of type geolocation, then the annotation will be defined like this:
+ * <code>
+ * @Event(name = "fuel_low", component_names = { "distance_for_refuelling", "gps_position" }, component_types = { "integer", "geolocation"})
+ * </code>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
 @Documented
 public @interface Event {
 	String name() default "";
+	String[] component_names() default {};
+	String[] component_types() default {};
 }

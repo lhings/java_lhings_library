@@ -17,11 +17,15 @@
 package com.lhings.java.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Event implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private String name;
+	
+	List<Argument> components = new ArrayList<Argument>();
 
 	public Event(){}
 	
@@ -35,6 +39,14 @@ public class Event implements Serializable {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public List<Argument> getComponents() {
+		return components;
+	}
+
+	public void setComponents(List<Argument> components) {
+		this.components = components;
 	}
 
 }

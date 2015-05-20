@@ -1039,4 +1039,14 @@ public abstract class LhingsDevice implements Runnable {
             log.error("Device list properties file could not be saved.");
         }
     }
+
+	public String getJsonDescriptor() {
+		return jsonDescriptor;
+	}
+
+	public void setJsonDescriptor(String jsonDescriptor) {
+		this.jsonDescriptor = jsonDescriptor;
+	}
+    
+    
 }

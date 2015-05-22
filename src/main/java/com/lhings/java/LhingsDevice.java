@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -48,11 +49,11 @@ import com.lhings.java.http.WebServiceCom;
 import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.model.Argument;
 import com.lhings.java.model.Device;
+import com.lhings.java.model.MethodOrFieldToInstanceMapper;
 import com.lhings.java.pushprotocol.ListenerThread;
 import com.lhings.java.stun.LyncnatProtocol;
 import com.lhings.java.stun.STUNMessage;
 import com.lhings.java.stun.STUNMessageFactory;
-import java.lang.annotation.Annotation;
 
 /**
  * This abstract class is the base class for all the Java devices. Any device
@@ -84,11 +85,11 @@ public abstract class LhingsDevice implements Runnable {
     private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
     private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
     private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
-    private static final String VERSION_STRING = "Lhings Java SDK v2.2 - ja009";
+    private static final String VERSION_STRING = "Lhings Java SDK v2.3 - ja010";
 
-    private final Map<String, Method> actionMethods = new HashMap<String, Method>();
+    private final Map<String, MethodOrFieldToInstanceMapper> actionMethods = new HashMap<String, MethodOrFieldToInstanceMapper>();
     private final Map<String, com.lhings.java.model.Action> actionDefinitions = new HashMap<String, com.lhings.java.model.Action>();
-    private final Map<String, Field> statusFields = new HashMap<String, Field>();
+    private final Map<String, MethodOrFieldToInstanceMapper> statusFields = new HashMap<String, MethodOrFieldToInstanceMapper>();
     private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
     private final List<String> eventDefinitions = new ArrayList<String>();
 
@@ -127,6 +128,10 @@ public abstract class LhingsDevice implements Runnable {
 
     private float loopFrequency = 10;
 
+    private List<Feature> features = new ArrayList<Feature>();
+    
+    private Map<String, Integer> incrementalCountersForName = new HashMap<String, Integer>(); 
+    
     /**
      * Creates a new device in Lhings associated to the account with the given
      * username and password. Username and password will not be stored in any
@@ -137,15 +142,35 @@ public abstract class LhingsDevice implements Runnable {
      * @param username Username of the Lhings account.
      * @param apikey The apikey of the account, or its password. Any of them will work.
      * @param deviceName The name of the device.
-     * @throws IOException If a network or connectivity error occurs.
+     * @throws IOException If a network or connectivity error occurs during initialization.
      * @throws LhingsException
      */
     public LhingsDevice(String username, String apikey, String deviceName)
             throws IOException, LhingsException {
         this(username, apikey, (int) (Math.random() * 50000) + 1027,
-                deviceName);
+                deviceName, null);
     }
 
+    /**
+     * Creates a new device in Lhings associated to the account with the given
+     * username and password. Username and password will not be stored in any
+     * way, they will be used only at runtime. If the device is created for the
+     * first time, it will be registered in Lhings and its UUID will be stored
+     * for the next time it is launched.
+     * 
+     * @param username Username of the Lhings account.
+     * @param apikey The apikey of the account, or its password. Any of them will work.
+     * @param deviceName The name of the device.
+     * @param features The list of features that must be added to the device before starting it.
+     * @throws IOException If a network or connectivity error occurs during initialization.
+     * @throws LhingsException
+     */
+    public LhingsDevice(String username, String apikey, String deviceName, List<Feature> features)
+            throws IOException, LhingsException {
+        this(username, apikey, (int) (Math.random() * 50000) + 1027,
+                deviceName, features);
+    }
+    
     /**
      * Creates a new device in Lhings associated to the account with the given
      * username and password. Username and password will not be stored in any
@@ -158,18 +183,20 @@ public abstract class LhingsDevice implements Runnable {
      * @param port The port the device will use to connect to the Internet for
      * non-http communications.
      * @param deviceName The name of the device.
-     * @throws IOException If a network or connectivity error occurs.
+     * @throws IOException If a network or connectivity error occurs during initialization.
      * @throws LhingsException
      */
-    public LhingsDevice(String username, String password, int port,
-            String deviceName) throws IOException, LhingsException {
-    	if (password.matches("^[0-9abcdef]{8}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{12}?"))
-    		this.apiKey = password;
+    public LhingsDevice(String username, String apikey, int port,
+            String deviceName, List<Feature> features) throws IOException, LhingsException {
+    	if (apikey.matches("^[0-9abcdef]{8}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{12}?"))
+    		this.apiKey = apikey;
     	else
-    		this.apiKey = WebServiceCom.getApiKey(username, password);
+    		this.apiKey = WebServiceCom.getApiKey(username, apikey);
         this.port = port;
         this.name = deviceName;
         this.username = username;
+        if (features != null)
+        	this.features.addAll(features);
         initDevice();
     }
 
@@ -226,13 +253,22 @@ public abstract class LhingsDevice implements Runnable {
         }
 
         Field[] fields = deviceClass.getDeclaredFields();
+        List<MethodOrFieldToInstanceMapper> methodFieldList = new ArrayList<MethodOrFieldToInstanceMapper>();
+        for (Field field : fields){
+        	methodFieldList.add(new MethodOrFieldToInstanceMapper(field, this));
+        }
 
-        for (Field field : fields) {
+        for (MethodOrFieldToInstanceMapper fieldMapper : methodFieldList) {
+        	Field field = fieldMapper.getField();
             // discover status components and add them to descriptor
             if (field.isAnnotationPresent(StatusComponent.class)) {
                 StatusComponent statusComp = field
                         .getAnnotation(StatusComponent.class);
                 String statusComponentName = statusComp.name();
+                // check if name is not already assigned
+                if (statusFields.get(statusComponentName)!=null){
+                	statusComponentName += incrementAndGetCounterForName(statusComponentName);
+                }
                 String statusComponentType;
                 try {
                     statusComponentType = tellLhingsType(field.getType()
@@ -261,7 +297,7 @@ public abstract class LhingsDevice implements Runnable {
                 statusDefinitions.put(statusComponentName,
                         new com.lhings.java.model.StatusComponent(
                                 statusComponentName, statusComponentType));
-                statusFields.put(statusComponentName, field);
+                statusFields.put(statusComponentName, fieldMapper);
             }
 
             // discover events and add them to descriptor
@@ -277,6 +313,16 @@ public abstract class LhingsDevice implements Runnable {
                     eventName = field.getName();
                 }
 
+                
+                // check event name is not already assigned
+                String originalName = null;
+                if (eventDefinitions.contains(eventName)){
+                	originalName = eventName;
+                	eventName += incrementAndGetCounterForName(eventName);
+                }
+                if (fieldMapper.getInstance().getClass() == Feature.class && originalName != null){
+                	((Feature)fieldMapper.getInstance()).setAliasForEvent(originalName, eventName);
+                }
                 com.lhings.java.model.Event eventToAdd = new com.lhings.java.model.Event(eventName);
                 
                 String[] componentNames = event.component_names();
@@ -296,18 +342,17 @@ public abstract class LhingsDevice implements Runnable {
         }
         // inspect class methods to identify possible actions
         Method[] methods = deviceClass.getMethods();
-        for (Method method : methods) {
+        methodFieldList.clear();
+        for (Method method : methods){
+        	methodFieldList.add(new MethodOrFieldToInstanceMapper(method, this));
+        }
+        
+        for (MethodOrFieldToInstanceMapper methodMapper : methodFieldList) {
+        	Method method = methodMapper.getMethod();
             if (method.isAnnotationPresent(Action.class)) {
-                com.lhings.java.model.Action modelAction = autoconfigureAction(method);
-                String actionName = method.getAnnotation(Action.class).name();
-                boolean validNameProvided = actionName.matches("^[a-zA-Z0-9_]*$");
-                if (!validNameProvided) {
-                    log.warn("\"" + actionName + "\" is not a valid name for an action. Only alphanumeric and underscore characters are allowed. Taking method name \"" + method.getName() + "\" as action name.");
-                }
-                if (actionName.isEmpty() || !validNameProvided) {
-                    actionName = method.getName();
-                }
-
+                com.lhings.java.model.Action modelAction = autoconfigureAction(methodMapper);
+                String actionName = modelAction.getName();
+                
                 actionDefinitions.put(
                         actionName, modelAction);
             }
@@ -316,17 +361,27 @@ public abstract class LhingsDevice implements Runnable {
         jsonDescriptor = new JSONObject(deviceDescriptor).toString();
     }
 
-    private com.lhings.java.model.Action autoconfigureAction(Method actionMethod)
+    
+    private com.lhings.java.model.Action autoconfigureAction(MethodOrFieldToInstanceMapper methodMapper)
             throws InitializationException {
+    	Method actionMethod = methodMapper.getMethod();
         Action action = actionMethod.getAnnotation(Action.class);
         String actionName, actionDescription;
         String[] argumentNames;
         actionName = action.name();
         actionDescription = action.description();
-        if (actionName.isEmpty() || !actionName.matches("^[a-zA-Z0-9_]*$")) {
+        boolean invalidActionName = !actionName.matches("^[a-zA-Z0-9_]*$");
+        if (actionName.isEmpty() || invalidActionName) {
+        	if (invalidActionName)
+        		log.warn("\"" + actionName + "\" is not a valid name for an action. Only alphanumeric and underscore characters are allowed. Taking method name \"" + actionMethod.getName() + "\" as action name.");
             actionName = actionMethod.getName();
         }
 
+        // check action name is not already assigned
+        if (actionMethods.get(actionName)!=null){
+        	actionName += incrementAndGetCounterForName(actionName);
+        }
+        
         Annotation[][] parameterAnnotations = actionMethod.getParameterAnnotations();
         if (parameterAnnotations.length == 1 && parameterAnnotations[0].length == 1) {
             // method has only one parameter and it is annotated, check if annotation is @Payload
@@ -335,12 +390,12 @@ public abstract class LhingsDevice implements Runnable {
                 returnAction.setPayloadNeeded(true);
                 // store method so that it is easier to access later
                 if (!actionMethods.keySet().contains(actionName)) {
-                    actionMethods.put(actionName, actionMethod);
+                    actionMethods.put(actionName, methodMapper);
                 } else {
                     throw new InitializationException(
                             "Duplicated action names: methods "
                             + actionMethod.getName() + " and "
-                            + actionMethods.get(actionName).getName()
+                            + actionMethods.get(actionName).getMethod().getName()
                             + " were both mapped to the same action name "
                             + actionName + ".");
                 }
@@ -381,12 +436,12 @@ public abstract class LhingsDevice implements Runnable {
 
         // store method so that it is easier to access later
         if (!actionMethods.keySet().contains(actionName)) {
-            actionMethods.put(actionName, actionMethod);
+            actionMethods.put(actionName, methodMapper);
         } else {
             throw new InitializationException(
                     "Duplicated action names: methods "
                     + actionMethod.getName() + " and "
-                    + actionMethods.get(actionName).getName()
+                    + actionMethods.get(actionName).getMethod().getName()
                     + " were both mapped to the same action name "
                     + actionName + ".");
         }
@@ -519,7 +574,7 @@ public abstract class LhingsDevice implements Runnable {
                     statusComponent.getType());
             arguments.add(arg);
             // retrieve current value of the corresponding field
-            Field field = statusFields.get(statusCompName);
+            Field field = statusFields.get(statusCompName).getField();
             field.setAccessible(true);
             try {
                 Object value = field.get(this);
@@ -613,7 +668,7 @@ public abstract class LhingsDevice implements Runnable {
             return;
         }
         String actionName = new String(rawActionName, Charset.forName("utf-8"));
-        Method actionMethod = actionMethods.get(actionName);
+        Method actionMethod = actionMethods.get(actionName).getMethod();
         if (actionMethod == null) {
             log.debug("Action not executed: this device has no action named "
                     + actionName + ".");
@@ -982,7 +1037,7 @@ public abstract class LhingsDevice implements Runnable {
         Map<String, Object> statusComponentValues = new HashMap<String, Object>();
         Set<String> statusComponentNames = statusFields.keySet();
         for (String statusComponentName : statusComponentNames) {
-            Field statusComponent = statusFields.get(statusComponentName);
+            Field statusComponent = statusFields.get(statusComponentName).getField();
             statusComponent.setAccessible(true);
             try {
                 Object statusComponentValue = statusComponent.get(this);
@@ -1040,6 +1095,17 @@ public abstract class LhingsDevice implements Runnable {
         }
     }
 
+    private int incrementAndGetCounterForName(String name){
+    	Integer counter = incrementalCountersForName.get(name);
+    	if(counter == null){
+    		counter = 0;
+    		incrementalCountersForName.put(name, Integer.valueOf(counter));
+    	}
+    	counter ++;
+    	incrementalCountersForName.put(name, counter);
+    	return counter;
+    }
+    
 	public String getJsonDescriptor() {
 		return jsonDescriptor;
 	}

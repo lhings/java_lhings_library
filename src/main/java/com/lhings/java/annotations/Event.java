@@ -34,7 +34,7 @@ import java.lang.annotation.Target;
  * that sends an event called "fuel_low", and its payload has two components, "distance_for_refuelling" of type integer and
  * "gps_position" of type geolocation, then the annotation will be defined like this:
  * <code>
- * @Event(name = "fuel_low", component_names = { "distance_for_refuelling", "gps_position" }, component_types = { "integer", "geolocation"})
+ * {@literal @}Event(name = "fuel_low", component_names = { "distance_for_refuelling", "gps_position" }, component_types = { "integer", "geolocation"})
  * </code>
  */
 @Retention(RetentionPolicy.RUNTIME)

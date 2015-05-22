@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
  * contain a list of the names of the parameters of the action. They do not need to be the same as the ones of the java
  * method, but they should be in the same order.
  * <code>
-@Action(name = "speed_up", description = "speed up the car", argumentNames = {"maximum_speed", "gear"})
+{@literal @}Action(name = "speed_up", description = "speed up the car", argumentNames = {"maximum_speed", "gear"})
 public void gofaster(float maxspeed, int numberOfGear) {
 
     // ...

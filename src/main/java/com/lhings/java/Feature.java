@@ -9,17 +9,28 @@ public abstract class Feature {
 	private long loopOnceEveryNTimes;
 	private long counter = 0;
 	private Map<String, String> eventNameAliases = new HashMap<String, String>();
-	private LhingsDevice parentDevice;
+	
+	LhingsDevice parentDevice;
 
+	public Feature(String name){
+		this(name, 1);
+	}
+	
+	public Feature(String name, long loopOnceEveryNTimes){
+		this.loopOnceEveryNTimes = loopOnceEveryNTimes;
+		this.name = name;
+	}
+	
 	public abstract void loop();
 	
 	public abstract void setup();
 	
-	public void loopEvery(){
+	void loopEvery(){
 		if (counter % loopOnceEveryNTimes == 0){
-			counter ++;
 			loop();
+			System.out.println("executed loop");
 		}
+		counter ++;
 	}
 	
 	protected void sendEvent(String name){
@@ -34,7 +45,7 @@ public abstract class Feature {
 		
 	}
 	
-	public void setAliasForEvent(String event, String alias){
+	void setAliasForEvent(String event, String alias){
 		eventNameAliases.put(event, alias);
 	}
 

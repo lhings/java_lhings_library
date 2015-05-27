@@ -24,6 +24,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -204,7 +205,7 @@ public abstract class LhingsDevice implements Runnable {
 	 *             initialization.
 	 * @throws LhingsException
 	 */
-	public LhingsDevice(String username, String apikey, int port, String deviceName, List<Feature> features) throws IOException, LhingsException {
+	public LhingsDevice(String username, String apikey, int port, String deviceName, List<? extends Feature> features) throws IOException, LhingsException {
 		if (apikey.matches("^[0-9abcdef]{8}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{12}?"))
 			this.apiKey = apikey;
 		else
@@ -212,11 +213,12 @@ public abstract class LhingsDevice implements Runnable {
 		this.port = port;
 		this.name = deviceName;
 		this.username = username;
-		for (Feature feature : features) {
-			feature.parentDevice = this;
-		}
-		if (features != null)
+		if (features != null) {
+			for (Feature feature : features) {
+				feature.parentDevice = this;
+			}
 			this.features.addAll(features);
+		}
 		initDevice();
 	}
 
@@ -333,10 +335,9 @@ public abstract class LhingsDevice implements Runnable {
 							+ "\" is not a valid name for an event. Only alphanumeric and underscore characters are allowed. Taking field name \""
 							+ field.getName() + "\" as event name.");
 				}
-				
+
 				// default event name is the name of the field
-				if (eventName.isEmpty() || !validEventComponentName) 
-				{
+				if (eventName.isEmpty() || !validEventComponentName) {
 					eventName = field.getName();
 				}
 
@@ -373,6 +374,13 @@ public abstract class LhingsDevice implements Runnable {
 			methodFieldList.add(new MethodOrFieldToInstanceMapper(method, this));
 		}
 
+		for (Feature feature : features) {
+			methods = feature.getClass().getMethods();
+			for (Method method : methods) {
+				methodFieldList.add(new MethodOrFieldToInstanceMapper(method, feature));
+			}
+		}
+		
 		for (MethodOrFieldToInstanceMapper methodMapper : methodFieldList) {
 			Method method = methodMapper.getMethod();
 			if (method.isAnnotationPresent(Action.class)) {
@@ -541,7 +549,7 @@ public abstract class LhingsDevice implements Runnable {
 			if (now - lastLoopExecutionTime > timeBetweenConsecutiveLoopExecutionsMillis) {
 				lastLoopExecutionTime = now;
 				loop();
-				for (Feature feature : features){
+				for (Feature feature : features) {
 					feature.loopEvery();
 				}
 			}
@@ -670,6 +678,7 @@ public abstract class LhingsDevice implements Runnable {
 		}
 		String actionName = new String(rawActionName, Charset.forName("utf-8"));
 		Method actionMethod = actionMethods.get(actionName).getMethod();
+		Object instance = actionMethods.get(actionName).getInstance();
 		if (actionMethod == null) {
 			log.debug("Action not executed: this device has no action named " + actionName + ".");
 			return;
@@ -699,7 +708,7 @@ public abstract class LhingsDevice implements Runnable {
 				args = null;
 			}
 			try {
-				actionMethod.invoke(this, args);
+				actionMethod.invoke(instance, args);
 			} catch (IllegalAccessException e) {
 				log.error("Error trying to invoke action " + actionName + ".", e);
 				return;

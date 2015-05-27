@@ -28,7 +28,6 @@ public abstract class Feature {
 	void loopEvery(){
 		if (counter % loopOnceEveryNTimes == 0){
 			loop();
-			System.out.println("executed loop");
 		}
 		counter ++;
 	}

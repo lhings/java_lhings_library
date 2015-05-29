@@ -106,21 +106,17 @@ public class ListenerThread implements Runnable {
 			if (aMessageWasReceived){
 				// store message for main device thread consumption
 				receivedMessages.add(Arrays.copyOf(messageReceived.getData(), messageReceived.getLength()));
-				
-				log.debug("Received one message from server");
 			}
 			
 			// read new message to send, if any
 			byte[] messageSent = messagesToSend.poll();
 			if (messageSent == null)
 				continue;
-			log.debug("There is one message to send");
 			
 			try {
 				DatagramPacket dp = new DatagramPacket(messageSent,
 						messageSent.length, SERVER_ADDRESS);
 				send(dp);
-				log.debug("Message sent");
 			} catch (IOException ex) {
 				log.error("Network error sending message to server.");
 			}

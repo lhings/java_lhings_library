@@ -19,12 +19,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -33,9 +33,11 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.lhings.java.annotations.Action;
+import com.lhings.java.annotations.Customizable;
 import com.lhings.java.annotations.DeviceInfo;
 import com.lhings.java.annotations.Event;
 import com.lhings.java.annotations.Payload;
@@ -55,6 +57,7 @@ import com.lhings.java.pushprotocol.ListenerThread;
 import com.lhings.java.stun.LyncnatProtocol;
 import com.lhings.java.stun.STUNMessage;
 import com.lhings.java.stun.STUNMessageFactory;
+import com.lhings.java.utils.Config;
 
 /**
  * This abstract class is the base class for all the Java devices. Any device
@@ -84,10 +87,13 @@ public abstract class LhingsDevice implements Runnable {
 	protected static final Logger log = LhingsLogger.getLogger();
 	protected static final Properties uuids;
 	private static final File fileUuids = new File("uuid.list");
+	private static final File fileCustomizations = new File("customizations.json");
 	private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
 	private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
 	private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
 	private static final String VERSION_STRING = "Lhings Java SDK v2.3 - ja010";
+	private static boolean customizationsAvailable;
+	private static JSONObject customizations;
 
 	private final Map<String, MethodOrFieldToInstanceMapper> actionMethods = new HashMap<String, MethodOrFieldToInstanceMapper>();
 	private final Map<String, com.lhings.java.model.Action> actionDefinitions = new HashMap<String, com.lhings.java.model.Action>();
@@ -109,6 +115,19 @@ public abstract class LhingsDevice implements Runnable {
 		} catch (IOException ex) {
 			log.fatal("Device list file could not be opened. Exiting.");
 			System.exit(1);
+		}
+		if (!fileCustomizations.exists()){
+			log.warn(fileCustomizations.getName() + " not found. @Customizable annotations will be ignored.");
+			customizationsAvailable = false;
+		} else {
+			try {
+			customizations = new JSONObject(Config.readJsonConfigFile(fileCustomizations.getName()));
+			customizationsAvailable = true;
+			} catch (JSONException ex){
+				log.warn("Could not load customizations file. @Customizable annotations will be ignored. Reason: " + ex.getMessage());
+				customizationsAvailable = false;
+			}
+			
 		}
 	}
 
@@ -250,8 +269,6 @@ public abstract class LhingsDevice implements Runnable {
 	private void autoconfigure() throws InitializationException {
 		Class<?> deviceClass = this.getClass();
 		Map<String, Object> deviceDescriptor = new HashMap<String, Object>();
-		// List<com.lhings.java.model.Action> actionList = new
-		// ArrayList<com.lhings.java.model.Action>();
 		List<com.lhings.java.model.Event> eventList = new ArrayList<com.lhings.java.model.Event>();
 		// inspect class to identify descriptor fields and status components
 		deviceDescriptor.put("actionList", actionDefinitions.values());
@@ -316,6 +333,12 @@ public abstract class LhingsDevice implements Runnable {
 				if (statusComponentName.isEmpty() || !validStatusComponentName) {
 					statusComponentName = field.getName();
 				}
+				
+				// check if name has a customization
+				String customizedName = getStatusComponentCustomizedName(field, fieldMapper, statusComponentName);
+				if (customizedName != null && !customizedName.isEmpty())
+					statusComponentName = customizedName;
+				
 				// check if name is not already assigned
 				if (statusFields.get(statusComponentName) != null) {
 					statusComponentName += incrementAndGetCounterForName(statusComponentName);
@@ -340,14 +363,20 @@ public abstract class LhingsDevice implements Runnable {
 				if (eventName.isEmpty() || !validEventComponentName) {
 					eventName = field.getName();
 				}
-
+				
+				String originalName = eventName;
+				
+				// check if name has a customization
+				String customizedName = getEventCustomizedName(field, fieldMapper, eventName);
+				if (customizedName != null && !customizedName.isEmpty())
+					eventName = customizedName;
+				
 				// check event name is not already assigned
-				String originalName = null;
 				if (eventDefinitions.contains(eventName)) {
-					originalName = eventName;
 					eventName += incrementAndGetCounterForName(eventName);
 				}
-				if (fieldMapper.getInstance().getClass() == Feature.class && originalName != null) {
+				
+				if (fieldMapper.getInstance() instanceof Feature) {
 					((Feature) fieldMapper.getInstance()).setAliasForEvent(originalName, eventName);
 				}
 				com.lhings.java.model.Event eventToAdd = new com.lhings.java.model.Event(eventName);
@@ -410,6 +439,11 @@ public abstract class LhingsDevice implements Runnable {
 			actionName = actionMethod.getName();
 		}
 
+		// check if name has a customization
+		String customizedName = getActionCustomizedName(actionMethod, methodMapper, actionName);
+		if (customizedName != null && !customizedName.isEmpty())
+			actionName = customizedName;
+		
 		// check action name is not already assigned
 		if (actionMethods.get(actionName) != null) {
 			actionName += incrementAndGetCounterForName(actionName);
@@ -1097,6 +1131,48 @@ public abstract class LhingsDevice implements Runnable {
 		return counter;
 	}
 
+	private String getCustomization(Feature feature, String keyForName, String annotationKey){
+		String mainKey = feature.getName();
+		String javaClassKey = feature.getClass().getCanonicalName();
+		JSONObject level1 = customizations.optJSONObject(mainKey);
+		if (level1 != null){
+			JSONObject level2 = level1.optJSONObject(javaClassKey);
+			if (level2 != null){
+				JSONObject level3 = level2.optJSONObject(annotationKey);
+				if (level3 != null)
+					return level3.optString(keyForName);
+			}
+				
+		}
+		return null;
+	}
+	
+	private String getStatusComponentCustomizedName(Field field, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize){
+		return getCustomizedName(field, fieldMapper, nameToCustomize, "statusComponents");
+	}
+	
+	private String getEventCustomizedName(Field field, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize){
+		return getCustomizedName(field, fieldMapper, nameToCustomize, "events");
+	}
+
+	private String getActionCustomizedName(Method method, MethodOrFieldToInstanceMapper methodMapper, String nameToCustomize){
+		return getCustomizedName(method, methodMapper, nameToCustomize, "actions");
+	}
+	
+	private String getCustomizedName(AccessibleObject fieldOrMethod, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize, String annotationKey){
+		// check if name has a customization
+		if (customizationsAvailable && fieldOrMethod.isAnnotationPresent(Customizable.class)){
+			if (fieldMapper.getInstance() instanceof Feature){
+				String customizedName = getCustomization((Feature)fieldMapper.getInstance(), nameToCustomize, annotationKey);
+				if (customizedName != null){
+					log.info("Customization found: StatusComponent with name " + nameToCustomize + " can be reported to Lhings as "+ customizedName);
+				}
+				return customizedName;
+			}
+		}
+		return null;
+	}
+	
 	public String getJsonDescriptor() {
 		return jsonDescriptor;
 	}

@@ -10,7 +10,7 @@ public abstract class Feature {
 	private long counter = 0;
 	private Map<String, String> eventNameAliases = new HashMap<String, String>();
 	
-	LhingsDevice parentDevice;
+	protected LhingsDevice parentDevice;
 
 	public Feature(String name){
 		this(name, 1);

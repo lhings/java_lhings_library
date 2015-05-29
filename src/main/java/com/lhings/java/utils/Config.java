@@ -13,30 +13,53 @@
  * limitations under the License. 
  */
 
-
 package com.lhings.java.utils;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.HashMap;
+import java.util.Scanner;
 
+import org.apache.log4j.Logger;
+
+import com.lhings.java.logging.LhingsLogger;
 
 public class Config {
-public static HashMap<String, Object> configProperties = new HashMap<String, Object>();
-	
+	protected static final Logger log = LhingsLogger.getLogger();
+
+	public static HashMap<String, Object> configProperties = new HashMap<String, Object>();
+
 	static {
 		// size of the buffer used to store incoming packets
 		configProperties.put("bufferSize", "1000");
 
 		configProperties.put("defaultMessageExpirationTime", 60);
-		
+
 		// set default clock to be used by server
 		configProperties.put("clockClass", DeviceClock.class.getName());
-		
+
 	}
 
 	public static Clock clock = new DeviceClock();
-	
-	
-	public static Object getProperty(String property){
+
+	public static Object getProperty(String property) {
 		return configProperties.get(property);
+	}
+
+	public static String readJsonConfigFile(String filename) {
+		StringBuffer contentsOfFile = new StringBuffer("");
+		Scanner sc = null;
+		try {
+			sc = new Scanner(new File(filename));
+			while (sc.hasNextLine()) {
+				contentsOfFile.append(sc.nextLine());
+			}
+		} catch (FileNotFoundException e) {
+			log.error("Configuration file " + filename + " not found. Create one and try again.");
+		} finally {
+			if (sc != null)
+				sc.close();
+		}
+		return contentsOfFile.toString();
 	}
 }

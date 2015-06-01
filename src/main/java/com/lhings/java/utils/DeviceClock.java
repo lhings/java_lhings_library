@@ -13,36 +13,41 @@
  * limitations under the License. 
  */
 
-
 package com.lhings.java.utils;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-public class DeviceClock extends DefaultExpirationPolicyClock{
-	
+public class DeviceClock extends DefaultExpirationPolicyClock {
+
 	private SimpleDateFormat sdf;
-	
-	public DeviceClock(){
+	private long offset = 0;
+
+	public DeviceClock() {
 		super();
 		TimeZone UTCtz = TimeZone.getTimeZone("UTC");
 		sdf = new SimpleDateFormat("d MMM yyyy HH:mm:ss Z");
 		sdf.setTimeZone(UTCtz);
 	}
-	
+
 	@Override
 	public long getUTCUnixTime() {
-		return System.currentTimeMillis()/1000;
+		return (System.currentTimeMillis() - offset) / 1000;
 	}
-	
-	public String toString(long time){
-		return sdf.format(new Date(time*1000));
+
+	public String toString(long time) {
+		return sdf.format(new Date(time * 1000));
 	}
-	
+
 	@Override
-	public String toString(){
+	public String toString() {
 		return toString(getUTCUnixTime());
 	}
-	
+
+	public void setOffset(long millis) {
+		this.offset = millis;
+
+	}
+
 }

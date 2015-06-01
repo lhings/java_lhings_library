@@ -42,4 +42,13 @@ public interface Clock {
 	 * @return
 	 */
 	public boolean isTimestampStale(long timestamp);
+	
+	/**
+	 * Sets the offset that must be added to the time given by
+	 * this clock to obtain a value of time synchronized with
+	 * the value of the server clock. Used to fix system time
+	 * upon receiving a bad timestamp message.
+	 * @param millis
+	 */
+	public void setOffset(long millis);
 }

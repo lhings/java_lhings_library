@@ -59,6 +59,7 @@ import com.lhings.java.pushprotocol.ListenerThread;
 import com.lhings.java.stun.LyncnatProtocol;
 import com.lhings.java.stun.STUNMessage;
 import com.lhings.java.stun.STUNMessageFactory;
+import com.lhings.java.utils.ByteMan;
 import com.lhings.java.utils.Config;
 
 /**
@@ -622,6 +623,16 @@ public abstract class LhingsDevice {
 			return;
 		}
 
+		if (message.isErrorResponse() && (Integer)message.getErrorCode()[0] == LyncnatProtocol.errBadTimestamp) {
+			byte[] byteServerTime = message.getAttribute(LyncnatProtocol.attrServerTime);
+			if (byteServerTime != null) {
+				long serverTime = ByteMan.bytesToInteger32(byteServerTime);
+				long offset = System.currentTimeMillis() / 1000 - serverTime;
+				Config.clock.setOffset(offset * 1000);
+				log.warn("Bad Timestamp message received. Adjusting clock by " + offset + " seconds.");
+				sendKeepAlive();
+			}
+		}
 		switch (message.getMethod()) {
 		case LyncnatProtocol.mAction:
 			log.debug("Received action message");

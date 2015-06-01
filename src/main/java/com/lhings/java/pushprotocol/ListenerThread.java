@@ -81,7 +81,7 @@ public class ListenerThread implements Runnable {
 	public static ListenerThread getInstance(int port, LhingsDevice device) throws LhingsException {
 		ListenerThread lt = new ListenerThread(port);
 		Thread listenerThread = new Thread(lt);
-		listenerThread.setName("thread-listener-" + device.uuid());
+		listenerThread.setName("thr-list-" + device.uuid().substring(0, 5));
 		listenerThread.start();
 		return lt;
 	}
@@ -92,7 +92,6 @@ public class ListenerThread implements Runnable {
 			boolean aMessageWasReceived = true;
 			DatagramPacket messageReceived = new DatagramPacket(
 					new byte[SOCKET_BUFFER_SIZE], 0, SOCKET_BUFFER_SIZE);
-			//log.debug(messagesToSend.size());
 			try {
 				serverSocket.receive(messageReceived);
 			} catch (SocketTimeoutException ex) {

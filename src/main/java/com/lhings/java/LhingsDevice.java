@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.log4j.Logger;
 import org.json.JSONException;
@@ -82,7 +84,7 @@ import com.lhings.java.utils.Config;
  * , <code>storeStatus()</code>, <code>getStatus()</code>, and
  * <code>statusRetrieve()</code>.
  */
-public abstract class LhingsDevice implements Runnable {
+public abstract class LhingsDevice {
 
 	protected static final Logger log = LhingsLogger.getLogger();
 	protected static final Properties uuids;
@@ -100,6 +102,7 @@ public abstract class LhingsDevice implements Runnable {
 	private final Map<String, MethodOrFieldToInstanceMapper> statusFields = new HashMap<String, MethodOrFieldToInstanceMapper>();
 	private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
 	private final List<String> eventDefinitions = new ArrayList<String>();
+	private final Timer timer = new Timer();
 
 	static {
 		System.out.println(VERSION_STRING);
@@ -142,8 +145,6 @@ public abstract class LhingsDevice implements Runnable {
 	private ListenerThread postman;
 
 	private String uuid;
-
-	private boolean running = false;
 
 	private String jsonDescriptor;
 
@@ -543,17 +544,59 @@ public abstract class LhingsDevice implements Runnable {
 		setup();
 		for (Feature feature : features)
 			feature.setup();
-		running = true;
 		postman = ListenerThread.getInstance(port, this);
-		(new Thread(this)).start();
+		
+		TimerTask changeThreadName = new TimerTask(){
+			@Override
+			public void run(){
+				Thread.currentThread().setName("thr-main-" + uuid.substring(0, 5));
+			}
+		};
+		timer.schedule(changeThreadName, 0);
+		
+		sendDescriptor();
+		startSession();
+		TimerTask keepAliveTask = new TimerTask(){
+			@Override
+			public void run(){
+				sendKeepAlive();
+			}
+		};
+		
+		TimerTask loopTask = new TimerTask(){
+			@Override
+			public void run(){
+				launchLoop();
+			}
+		};
+		
+		long loopDelay = (long) (1000/loopFrequency);
+		
+		
+		timer.schedule(keepAliveTask, 0, TIME_BETWEEN_KEEPALIVES_MILLIS);
+		timer.schedule(loopTask, 1000, loopDelay);
+//		(new Thread(this)).start();
 		log.info("Device started");
 	}
 
+	private void launchLoop(){
+		loop();
+		for (Feature feature : features) {
+			feature.loopEvery();
+		}
+		
+		try {
+			processMessage();
+		} catch (ActionExecutionException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
 	/**
 	 * Stops the device
 	 */
 	public void stop() {
-		running = false;
 		postman.stop();
 		try {
 			WebServiceCom.endSession(this);
@@ -562,40 +605,11 @@ public abstract class LhingsDevice implements Runnable {
 		} catch (LhingsException e) {
 			log.warn("Session could not be ended due to bad credentials, bad request, or the device was deleted on server side while online");
 		}
-	}
-
-	public void run() {
-		Thread.currentThread().setName("thread-main-" + uuid);
-		sendDescriptor();
-		startSession();
-		sendKeepAlive();
-		long lastKeepAliveSentTime = System.currentTimeMillis();
-		long lastLoopExecutionTime = 0L;
-		long timeBetweenConsecutiveLoopExecutionsMillis = (long) (1000 / loopFrequency);
-		while (running) {
-			long now = System.currentTimeMillis();
-			if ((now - lastKeepAliveSentTime) > TIME_BETWEEN_KEEPALIVES_MILLIS) {
-				sendKeepAlive();
-				lastKeepAliveSentTime = now;
-			}
-
-			now = System.currentTimeMillis();
-			if (now - lastLoopExecutionTime > timeBetweenConsecutiveLoopExecutionsMillis) {
-				lastLoopExecutionTime = now;
-				loop();
-				for (Feature feature : features) {
-					feature.loopEvery();
-				}
-			}
-
-			try {
-				processMessage();
-			} catch (ActionExecutionException e) {
-				e.printStackTrace();
-			}
-		}
+		timer.cancel();
 		log.info("Successfully stopped device.");
 	}
+
+
 
 	private void processMessage() throws ActionExecutionException {
 		byte[] rawMessage = postman.receive();

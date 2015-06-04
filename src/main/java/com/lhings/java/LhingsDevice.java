@@ -556,7 +556,8 @@ public abstract class LhingsDevice {
 		timer.schedule(changeThreadName, 0);
 		
 		sendDescriptor();
-		startSession();
+		if (!startSession())
+			return;
 		TimerTask keepAliveTask = new TimerTask(){
 			@Override
 			public void run(){
@@ -855,8 +856,9 @@ public abstract class LhingsDevice {
 	 * the waiting time between tries each time. This method blocks until
 	 * session is started successfully.
 	 *
+	 * @return true is session is started successfully, false otherwise
 	 */
-	private void startSession() {
+	private boolean startSession() {
 		long waitingTime = INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS;
 		boolean started = false;
 		while (!started) {
@@ -868,11 +870,11 @@ public abstract class LhingsDevice {
 			} catch (DeviceDoesNotExistException ex) {
 				log.fatal("Unable to connect device to Lhings. Device is not recognized by the server. Did you delete it on Lhings? Remove the appropriate entry from file uuid.list and try again. Exiting.");
 				this.stop();
-				return;
+				return false;
 			} catch (UnauthorizedException ex) {
 				log.fatal("Unauthorized. Unable to connect device with uuid to server: provided credentials (either api key or username/password) are not valid. Exiting.");
 				this.stop();
-				return;
+				return false;
 			} catch (LhingsException e) {
 				log.warn(e.getMessage());
 			}
@@ -888,6 +890,7 @@ public abstract class LhingsDevice {
 			}
 		}
 		log.info("Device started session succesfully.");
+		return true;
 	}
 
 	/**

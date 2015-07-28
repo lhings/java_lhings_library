@@ -823,7 +823,10 @@ public abstract class LhingsDevice {
 		Object[] args = new Object[parameterTypes.length];
 		List<Argument> arguments = action.getInputs();
 		for (int j = 0; j < arguments.size(); j++) {
-			args[j] = argumentValues.get(arguments.get(j).getName());
+			if (arguments.get(j).getType() == "timestamp") {
+				args[j] = new Date(1000 * Long.valueOf(argumentValues.get(arguments.get(j).getName()).toString()));
+			} else				
+				args[j] = argumentValues.get(arguments.get(j).getName());
 		}
 		return args;
 	}

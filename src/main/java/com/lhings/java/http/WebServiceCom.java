@@ -59,6 +59,7 @@ public final class WebServiceCom {
 
 	static {
 		System.setProperty("jsse.enableSNIExtension", "false");
+		System.setProperty("javax.net.ssl.trustStore", "./lhings-java.keystore");
 	}
 
 	@SuppressWarnings("unused")

@@ -56,6 +56,8 @@ import com.lhings.java.model.Argument;
 import com.lhings.java.model.Device;
 import com.lhings.java.model.MethodOrFieldToInstanceMapper;
 import com.lhings.java.pushprotocol.ListenerThread;
+import com.lhings.java.pushprotocol.SocketManager;
+import com.lhings.java.pushprotocol.UDPSocketManager;
 import com.lhings.java.stun.LyncnatProtocol;
 import com.lhings.java.stun.STUNMessage;
 import com.lhings.java.stun.STUNMessageFactory;
@@ -104,6 +106,8 @@ public abstract class LhingsDevice {
 	private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
 	private final List<String> eventDefinitions = new ArrayList<String>();
 	private final Timer timer = new Timer();
+	
+	private SocketManager socketMan;
 
 	static {
 		System.out.println(VERSION_STRING);
@@ -137,8 +141,6 @@ public abstract class LhingsDevice {
 
 	private String apiKey;
 
-	private int port;
-
 	private String name;
 
 	private String username;
@@ -154,6 +156,7 @@ public abstract class LhingsDevice {
 	private List<Feature> features = new ArrayList<Feature>();
 
 	private Map<String, Integer> incrementalCountersForName = new HashMap<String, Integer>();
+	private int port;
 
 	/**
 	 * Creates a new device in Lhings associated to the account with the given
@@ -175,34 +178,9 @@ public abstract class LhingsDevice {
 	 * @throws LhingsException
 	 */
 	public LhingsDevice(String username, String apikey, String deviceName) throws IOException, LhingsException {
-		this(username, apikey, (int) (Math.random() * 50000) + 1027, deviceName, null);
+		this(username, apikey, deviceName, null);
 	}
 
-	/**
-	 * Creates a new device in Lhings associated to the account with the given
-	 * username and password. Username and password will not be stored in any
-	 * way, they will be used only at runtime. If the device is created for the
-	 * first time, it will be registered in Lhings and its UUID will be stored
-	 * for the next time it is launched.
-	 * 
-	 * @param username
-	 *            Username of the Lhings account.
-	 * @param apikey
-	 *            The apikey of the account, or its password. Any of them will
-	 *            work.
-	 * @param deviceName
-	 *            The name of the device.
-	 * @param features
-	 *            The list of features that must be added to the device before
-	 *            starting it.
-	 * @throws IOException
-	 *             If a network or connectivity error occurs during
-	 *             initialization.
-	 * @throws LhingsException
-	 */
-	public LhingsDevice(String username, String apikey, String deviceName, List<Feature> features) throws IOException, LhingsException {
-		this(username, apikey, (int) (Math.random() * 50000) + 1027, deviceName, features);
-	}
 
 	/**
 	 * Creates a new device in Lhings associated to the account with the given
@@ -226,12 +204,11 @@ public abstract class LhingsDevice {
 	 *             initialization.
 	 * @throws LhingsException
 	 */
-	public LhingsDevice(String username, String apikey, int port, String deviceName, List<? extends Feature> features) throws IOException, LhingsException {
+	public LhingsDevice(String username, String apikey, String deviceName, List<? extends Feature> features) throws IOException, LhingsException {
 		if (apikey.matches("^[0-9abcdef]{8}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{4}?-[0-9abcdef]{12}?"))
 			this.apiKey = apikey;
 		else
 			this.apiKey = WebServiceCom.getApiKey(username, apikey);
-		this.port = port;
 		this.name = deviceName;
 		this.username = username;
 		if (features != null) {
@@ -542,10 +519,12 @@ public abstract class LhingsDevice {
 	 * @throws LhingsException
 	 */
 	public void start() throws LhingsException {
+		if(socketMan == null)
+			socketMan = (SocketManager) new UDPSocketManager(); // defaulting to UDP communication
 		setup();
 		for (Feature feature : features)
 			feature.setup();
-		postman = ListenerThread.getInstance(port, this);
+		postman = ListenerThread.getInstance(this, socketMan);
 		
 		TimerTask changeThreadName = new TimerTask(){
 			@Override
@@ -1004,6 +983,10 @@ public abstract class LhingsDevice {
 		return port;
 	}
 
+	public void setPort(int port) {
+		this.port = port;
+	}
+	
 	/**
 	 * Returns the name of the device.
 	 *
@@ -1212,4 +1195,14 @@ public abstract class LhingsDevice {
 		this.jsonDescriptor = jsonDescriptor;
 	}
 
+
+	public void setSocketManager(SocketManager socketMan) {
+		if (this.socketMan == null)
+			this.socketMan = socketMan;
+		else
+			throw new IllegalStateException("SocketManager already initialized. setSocketMan() can only be called once, and it must be done before calling start().");
+	}
+
+	
+	
 }

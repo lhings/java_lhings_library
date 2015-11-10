@@ -16,17 +16,9 @@
 
 package com.lhings.java.pushprotocol;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.lhings.java.LhingsDevice;
@@ -35,20 +27,12 @@ import com.lhings.java.logging.LhingsLogger;
 
 public class ListenerThread implements Runnable {
 
-	private static final int SOCKET_BUFFER_SIZE = 2048;
-	private static final int RECEIVE_TIMEOUT_MILLIS = 40;
-	private static final String SERVER_HOSTNAME = "www.lhings.com";
-	private static final int SERVER_PORT = 3478;
-	private static final InetSocketAddress SERVER_ADDRESS = new InetSocketAddress(
-			SERVER_HOSTNAME, SERVER_PORT);
 	private static Logger log = LhingsLogger.getLogger();
-
-	private int clientPort;
-	private DatagramSocket serverSocket;
 	private BlockingQueue<byte[]> receivedMessages = new LinkedBlockingQueue<byte[]>();
 	private BlockingQueue<byte[]> messagesToSend = new LinkedBlockingQueue<byte[]>();
 
 	private boolean running = true;
+	private SocketManager socketMan;
 
 	/**
 	 * Listener thread initialization takes place here.
@@ -56,18 +40,9 @@ public class ListenerThread implements Runnable {
 	 * @return true if initialization is successful, false otherwise.
 	 * @throws LhingsException
 	 */
-	private ListenerThread(int port) throws LhingsException {
-		try {
-			serverSocket = new DatagramSocket(null);
-			serverSocket.setSoTimeout(RECEIVE_TIMEOUT_MILLIS);
-			serverSocket.setReuseAddress(true);
-			serverSocket.bind(new InetSocketAddress(port));
-			this.clientPort = port;
-			log.log(Level.DEBUG, "Listener thread ready, listening on port " + port);
-		} catch (SocketException e) {
-			log.log(Level.ERROR, "Listening socket could not be initialized, see stack trace for details.", e);
-			throw new LhingsException(e);
-		}
+	private ListenerThread(SocketManager socketMan) throws LhingsException {
+		this.socketMan = socketMan;
+		socketMan.init();
 	}
 
 	/**
@@ -78,10 +53,11 @@ public class ListenerThread implements Runnable {
 	 * @throws LhingsException
 	 *             If the socket for push communications
 	 */
-	public static ListenerThread getInstance(int port, LhingsDevice device) throws LhingsException {
-		ListenerThread lt = new ListenerThread(port);
+	public static ListenerThread getInstance(LhingsDevice device, SocketManager socketManager) throws LhingsException {
+		ListenerThread lt = new ListenerThread(socketManager);
 		Thread listenerThread = new Thread(lt);
 		listenerThread.setName("thr-list-" + device.uuid().substring(0, 5));
+		device.setPort(socketManager.getPort());
 		listenerThread.start();
 		return lt;
 	}
@@ -89,22 +65,13 @@ public class ListenerThread implements Runnable {
 	public void run() {
 		// main listening loop
 		while (running) {
-			boolean aMessageWasReceived = true;
-			DatagramPacket messageReceived = new DatagramPacket(
-					new byte[SOCKET_BUFFER_SIZE], 0, SOCKET_BUFFER_SIZE);
-			try {
-				serverSocket.receive(messageReceived);
-			} catch (SocketTimeoutException ex) {
-				aMessageWasReceived = false;
-			} catch (IOException e) {
-				aMessageWasReceived = false;
-				log.log(Level.ERROR, "A network IO error ocurred, see stack trace for details", e);
-				continue;
-			}
+			byte[] messageReceived = null;
+			messageReceived = socketMan.receive();
+			 
 			
-			if (aMessageWasReceived){
+			if (messageReceived != null){
 				// store message for main device thread consumption
-				receivedMessages.add(Arrays.copyOf(messageReceived.getData(), messageReceived.getLength()));
+				receivedMessages.add(messageReceived);
 			}
 			
 			// read new message to send, if any
@@ -113,10 +80,8 @@ public class ListenerThread implements Runnable {
 				continue;
 			
 			try {
-				DatagramPacket dp = new DatagramPacket(messageSent,
-						messageSent.length, SERVER_ADDRESS);
-				send(dp);
-			} catch (IOException ex) {
+				socketMan.send(messageSent);
+			} catch (LhingsException ex) {
 				log.error("Network error sending message to server.");
 			}
 		}
@@ -125,14 +90,6 @@ public class ListenerThread implements Runnable {
 
 	public void stop() {
 		running = false;
-	}
-
-	private void send(DatagramPacket dp) throws IOException {
-		DatagramSocket ds = new DatagramSocket(null);
-		ds.setReuseAddress(true);
-		ds.bind(new InetSocketAddress(clientPort));
-		ds.send(dp);
-		ds.close();
 	}
 
 	public void send(byte[] message){

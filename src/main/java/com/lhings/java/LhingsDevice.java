@@ -96,7 +96,7 @@ public abstract class LhingsDevice {
 	private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
 	private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
 	private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
-	private static final String VERSION_STRING = "Lhings Java SDK v2.3 - ja010";
+	private static final String VERSION_STRING = "Lhings Java SDK v2.4 - ja010";
 	private static boolean customizationsAvailable;
 	private static JSONObject customizations;
 
@@ -105,8 +105,8 @@ public abstract class LhingsDevice {
 	private final Map<String, MethodOrFieldToInstanceMapper> statusFields = new HashMap<String, MethodOrFieldToInstanceMapper>();
 	private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
 	private final List<String> eventDefinitions = new ArrayList<String>();
-	private final Timer timer = new Timer();
 	
+	private Timer timer = new Timer();
 	private SocketManager socketMan;
 
 	static {
@@ -519,9 +519,9 @@ public abstract class LhingsDevice {
 	 * @throws LhingsException
 	 */
 	public void start() throws LhingsException {
+		setup();
 		if(socketMan == null)
 			socketMan = (SocketManager) new UDPSocketManager(); // defaulting to UDP communication
-		setup();
 		for (Feature feature : features)
 			feature.setup();
 		postman = ListenerThread.getInstance(this, socketMan);
@@ -532,6 +532,7 @@ public abstract class LhingsDevice {
 				Thread.currentThread().setName("thr-main-" + uuid.substring(0, 5));
 			}
 		};
+		timer = new Timer();
 		timer.schedule(changeThreadName, 0);
 		
 		sendDescriptor();

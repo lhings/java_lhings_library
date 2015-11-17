@@ -32,6 +32,10 @@ public class SSLSocketManager implements SocketManager{
 	private int clientPort;
 	private int messageLength;
 
+	public SSLSocketManager() {
+		System.setProperty("javax.net.ssl.trustStore", "./lhings-java.keystore");
+	}
+	
 	public void init() throws LhingsException {
 		connect();
 	}

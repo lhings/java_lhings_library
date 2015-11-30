@@ -31,14 +31,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import com.lhings.java.annotations.Action;
 import com.lhings.java.annotations.Customizable;
 import com.lhings.java.annotations.DeviceInfo;
@@ -101,13 +104,14 @@ public abstract class LhingsDevice {
 	private static boolean customizationsAvailable;
 	private static JSONObject customizations;
 	private static ScheduledExecutorService sharedTimer;
-	
+
 	private final Map<String, MethodOrFieldToInstanceMapper> actionMethods = new HashMap<String, MethodOrFieldToInstanceMapper>();
 	private final Map<String, com.lhings.java.model.Action> actionDefinitions = new HashMap<String, com.lhings.java.model.Action>();
 	private final Map<String, MethodOrFieldToInstanceMapper> statusFields = new HashMap<String, MethodOrFieldToInstanceMapper>();
 	private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
 	private final List<String> eventDefinitions = new ArrayList<String>();
-	
+
+	private ScheduledFuture keepAliveScheduler, loopScheduler; 
 	
 	private SocketManager socketMan;
 
@@ -126,18 +130,18 @@ public abstract class LhingsDevice {
 			log.fatal("Device list file could not be opened. Exiting.");
 			System.exit(1);
 		}
-		if (!fileCustomizations.exists()){
+		if (!fileCustomizations.exists()) {
 			log.warn(fileCustomizations.getName() + " not found. @Customizable annotations will be ignored.");
 			customizationsAvailable = false;
 		} else {
 			try {
-			customizations = new JSONObject(Config.readJsonConfigFile(fileCustomizations.getName()));
-			customizationsAvailable = true;
-			} catch (JSONException ex){
+				customizations = new JSONObject(Config.readJsonConfigFile(fileCustomizations.getName()));
+				customizationsAvailable = true;
+			} catch (JSONException ex) {
 				log.warn("Could not load customizations file. @Customizable annotations will be ignored. Reason: " + ex.getMessage());
 				customizationsAvailable = false;
 			}
-			
+
 		}
 	}
 
@@ -156,7 +160,7 @@ public abstract class LhingsDevice {
 	private float loopFrequency = 10;
 
 	private List<Feature> features = new ArrayList<Feature>();
-	
+
 	private int threads = 1;
 
 	private Map<String, Integer> incrementalCountersForName = new HashMap<String, Integer>();
@@ -184,7 +188,6 @@ public abstract class LhingsDevice {
 	public LhingsDevice(String username, String apikey, String deviceName) throws IOException, LhingsException {
 		this(username, apikey, deviceName, null);
 	}
-
 
 	/**
 	 * Creates a new device in Lhings associated to the account with the given
@@ -316,12 +319,12 @@ public abstract class LhingsDevice {
 				if (statusComponentName.isEmpty() || !validStatusComponentName) {
 					statusComponentName = field.getName();
 				}
-				
+
 				// check if name has a customization
 				String customizedName = getStatusComponentCustomizedName(field, fieldMapper, statusComponentName);
 				if (customizedName != null && !customizedName.isEmpty())
 					statusComponentName = customizedName;
-				
+
 				// check if name is not already assigned
 				if (statusFields.get(statusComponentName) != null) {
 					statusComponentName += incrementAndGetCounterForName(statusComponentName);
@@ -346,19 +349,19 @@ public abstract class LhingsDevice {
 				if (eventName.isEmpty() || !validEventComponentName) {
 					eventName = field.getName();
 				}
-				
+
 				String originalName = eventName;
-				
+
 				// check if name has a customization
 				String customizedName = getEventCustomizedName(field, fieldMapper, eventName);
 				if (customizedName != null && !customizedName.isEmpty())
 					eventName = customizedName;
-				
+
 				// check event name is not already assigned
 				if (eventDefinitions.contains(eventName)) {
 					eventName += incrementAndGetCounterForName(eventName);
 				}
-				
+
 				if (fieldMapper.getInstance() instanceof Feature) {
 					((Feature) fieldMapper.getInstance()).setAliasForEvent(originalName, eventName);
 				}
@@ -392,7 +395,7 @@ public abstract class LhingsDevice {
 				methodFieldList.add(new MethodOrFieldToInstanceMapper(method, feature));
 			}
 		}
-		
+
 		for (MethodOrFieldToInstanceMapper methodMapper : methodFieldList) {
 			Method method = methodMapper.getMethod();
 			if (method.isAnnotationPresent(Action.class)) {
@@ -426,7 +429,7 @@ public abstract class LhingsDevice {
 		String customizedName = getActionCustomizedName(actionMethod, methodMapper, actionName);
 		if (customizedName != null && !customizedName.isEmpty())
 			actionName = customizedName;
-		
+
 		// check action name is not already assigned
 		if (actionMethods.get(actionName) != null) {
 			actionName += incrementAndGetCounterForName(actionName);
@@ -524,58 +527,58 @@ public abstract class LhingsDevice {
 	 */
 	public void start() throws LhingsException {
 		setup();
-		if(socketMan == null)
-			socketMan = (SocketManager) new UDPSocketManager(); // defaulting to UDP communication
+		if (socketMan == null)
+			socketMan = (SocketManager) new UDPSocketManager(); // defaulting to
+																// UDP
+																// communication
 		for (Feature feature : features)
 			feature.setup();
 		postman = ListenerThread.getInstance(this, socketMan);
-		
+
 		if (sharedTimer == null) {
 			sharedTimer = Executors.newScheduledThreadPool(threads);
 			log.info("Initialized shared timer with " + threads + " execution threads.");
 		}
-		
+
 		sendDescriptor();
 		if (!startSession())
 			return;
-		Runnable keepAliveTask = new Runnable(){
-			public void run(){
+		Runnable keepAliveTask = new Runnable() {
+			public void run() {
 				sendKeepAlive();
 			}
 		};
-		
-		Runnable loopTask = new Runnable(){
-			public void run(){
+
+		Runnable loopTask = new Runnable() {
+			public void run() {
 				launchLoop();
 			}
 		};
-		
-		long loopDelay = (long) (1000/loopFrequency);
-		
-		sharedTimer.scheduleWithFixedDelay(keepAliveTask, 0, TIME_BETWEEN_KEEPALIVES_MILLIS, TimeUnit.MILLISECONDS);
-		sharedTimer.scheduleWithFixedDelay(loopTask, 1000, loopDelay, TimeUnit.MILLISECONDS);
+
+		long loopDelay = (long) (1000 / loopFrequency);
+
+		keepAliveScheduler = sharedTimer.scheduleWithFixedDelay(keepAliveTask, 0, TIME_BETWEEN_KEEPALIVES_MILLIS, TimeUnit.MILLISECONDS);
+		loopScheduler = sharedTimer.scheduleWithFixedDelay(loopTask, 1000, loopDelay, TimeUnit.MILLISECONDS);
 		log.info("Device started");
 	}
 
-	private void launchLoop(){
+	private void launchLoop() {
 		loop();
 		for (Feature feature : features) {
 			feature.loopEvery();
 		}
-		
+
 		try {
 			processMessage();
 		} catch (ActionExecutionException e) {
 			e.printStackTrace();
 		}
 	}
-	
-	
+
 	/**
 	 * Stops the device
 	 */
 	public void stop() {
-		postman.stop();
 		try {
 			WebServiceCom.endSession(this);
 		} catch (IOException e) {
@@ -583,24 +586,30 @@ public abstract class LhingsDevice {
 		} catch (LhingsException e) {
 			log.warn("Session could not be ended due to bad credentials, bad request, or the device was deleted on server side while online");
 		}
-		sharedTimer.shutdownNow();
-		log.info("Successfully stopped device.");
+		keepAliveScheduler.cancel(true);
+		loopScheduler.cancel(true);
+		log.info("Successfully stopped device "+ this.getName() + ".");
 	}
 
-
-
 	private void processMessage() throws ActionExecutionException {
-		byte[] rawMessage = postman.receive();
-		if (rawMessage == null) {
-			return;
+		STUNMessage message;
+		synchronized (postman) {
+			byte[] rawMessage = postman.readMessage();
+			if (rawMessage == null) {
+				return;
+			}
+			message = STUNMessage.getSTUNMessage(rawMessage);
+			if (message == null) {
+				return;
+			}
+			UUID messageUuid = UUIDUtil.uuid(message.getAttribute(LyncnatProtocol.attrLyncportId));
+			if (!this.uuid.equalsIgnoreCase(messageUuid.toString()))
+				return;
+			postman.remove(); 
 		}
 		log.debug("Processing message");
-		STUNMessage message = STUNMessage.getSTUNMessage(rawMessage);
-		if (message == null) {
-			return;
-		}
 
-		if (message.isErrorResponse() && (Integer)message.getErrorCode()[0] == LyncnatProtocol.errBadTimestamp) {
+		if (message.isErrorResponse() && (Integer) message.getErrorCode()[0] == LyncnatProtocol.errBadTimestamp) {
 			byte[] byteServerTime = message.getAttribute(LyncnatProtocol.attrServerTime);
 			if (byteServerTime != null) {
 				long serverTime = ByteMan.bytesToInteger32(byteServerTime);
@@ -801,7 +810,7 @@ public abstract class LhingsDevice {
 		for (int j = 0; j < arguments.size(); j++) {
 			if (arguments.get(j).getType() == "timestamp") {
 				args[j] = new Date(1000 * Long.valueOf(argumentValues.get(arguments.get(j).getName()).toString()));
-			} else				
+			} else
 				args[j] = argumentValues.get(arguments.get(j).getName());
 		}
 		return args;
@@ -983,7 +992,7 @@ public abstract class LhingsDevice {
 	public void setPort(int port) {
 		this.port = port;
 	}
-	
+
 	/**
 	 * Returns the name of the device.
 	 *
@@ -1142,48 +1151,48 @@ public abstract class LhingsDevice {
 		return counter;
 	}
 
-	private String getCustomization(Feature feature, String keyForName, String annotationKey){
+	private String getCustomization(Feature feature, String keyForName, String annotationKey) {
 		String mainKey = feature.getName();
 		String javaClassKey = feature.getClass().getCanonicalName();
 		JSONObject level1 = customizations.optJSONObject(mainKey);
-		if (level1 != null){
+		if (level1 != null) {
 			JSONObject level2 = level1.optJSONObject(javaClassKey);
-			if (level2 != null){
+			if (level2 != null) {
 				JSONObject level3 = level2.optJSONObject(annotationKey);
 				if (level3 != null)
 					return level3.optString(keyForName);
 			}
-				
+
 		}
 		return null;
 	}
-	
-	private String getStatusComponentCustomizedName(Field field, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize){
+
+	private String getStatusComponentCustomizedName(Field field, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize) {
 		return getCustomizedName(field, fieldMapper, nameToCustomize, "statusComponents");
 	}
-	
-	private String getEventCustomizedName(Field field, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize){
+
+	private String getEventCustomizedName(Field field, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize) {
 		return getCustomizedName(field, fieldMapper, nameToCustomize, "events");
 	}
 
-	private String getActionCustomizedName(Method method, MethodOrFieldToInstanceMapper methodMapper, String nameToCustomize){
+	private String getActionCustomizedName(Method method, MethodOrFieldToInstanceMapper methodMapper, String nameToCustomize) {
 		return getCustomizedName(method, methodMapper, nameToCustomize, "actions");
 	}
-	
-	private String getCustomizedName(AccessibleObject fieldOrMethod, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize, String annotationKey){
+
+	private String getCustomizedName(AccessibleObject fieldOrMethod, MethodOrFieldToInstanceMapper fieldMapper, String nameToCustomize, String annotationKey) {
 		// check if name has a customization
-		if (customizationsAvailable && fieldOrMethod.isAnnotationPresent(Customizable.class)){
-			if (fieldMapper.getInstance() instanceof Feature){
-				String customizedName = getCustomization((Feature)fieldMapper.getInstance(), nameToCustomize, annotationKey);
-				if (customizedName != null){
-					log.info("Customization found: StatusComponent with name " + nameToCustomize + " can be reported to Lhings as "+ customizedName);
+		if (customizationsAvailable && fieldOrMethod.isAnnotationPresent(Customizable.class)) {
+			if (fieldMapper.getInstance() instanceof Feature) {
+				String customizedName = getCustomization((Feature) fieldMapper.getInstance(), nameToCustomize, annotationKey);
+				if (customizedName != null) {
+					log.info("Customization found: StatusComponent with name " + nameToCustomize + " can be reported to Lhings as " + customizedName);
 				}
 				return customizedName;
 			}
 		}
 		return null;
 	}
-	
+
 	public String getJsonDescriptor() {
 		return jsonDescriptor;
 	}
@@ -1192,29 +1201,26 @@ public abstract class LhingsDevice {
 		this.jsonDescriptor = jsonDescriptor;
 	}
 
-
 	public void setSocketManager(SocketManager socketMan) {
 		if (this.socketMan == null)
 			this.socketMan = socketMan;
 		else
-			throw new IllegalStateException("SocketManager already initialized. setSocketMan() can only be called once, and it must be done before calling start().");
+			throw new IllegalStateException(
+					"SocketManager already initialized. setSocketMan() can only be called once, and it must be done before calling start().");
 	}
 
-
 	public void setThreads(int threads) {
-		if(threads <= 1) {
+		if (threads <= 1) {
 			log.warn("Number of threads cannot be lees than 1, " + threads + " given. Defaulting to 1.");
 			return;
 		}
-		
+
 		if (sharedTimer != null) {
 			log.warn("Changing the number of threads after the first device has started has no effect.");
 			return;
 		}
-			
+
 		this.threads = threads;
 	}
 
-	
-	
 }

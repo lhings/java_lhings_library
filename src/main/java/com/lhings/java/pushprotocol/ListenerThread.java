@@ -28,6 +28,7 @@ import com.lhings.java.logging.LhingsLogger;
 public class ListenerThread implements Runnable {
 
 	private static Logger log = LhingsLogger.getLogger();
+	private static ListenerThread instance;
 	private BlockingQueue<byte[]> receivedMessages = new LinkedBlockingQueue<byte[]>();
 	private BlockingQueue<byte[]> messagesToSend = new LinkedBlockingQueue<byte[]>();
 
@@ -54,12 +55,14 @@ public class ListenerThread implements Runnable {
 	 *             If the socket for push communications
 	 */
 	public static ListenerThread getInstance(LhingsDevice device, SocketManager socketManager) throws LhingsException {
-		ListenerThread lt = new ListenerThread(socketManager);
-		Thread listenerThread = new Thread(lt);
+		if (instance != null)
+			return instance;
+		instance = new ListenerThread(socketManager);
+		Thread listenerThread = new Thread(instance);
 		listenerThread.setName("thr-list-" + device.uuid().substring(0, 5));
 		device.setPort(socketManager.getPort());
 		listenerThread.start();
-		return lt;
+		return instance;
 	}
 
 	public void run() {
@@ -96,7 +99,11 @@ public class ListenerThread implements Runnable {
 		messagesToSend.add(message);
 	}
 
-	public byte[] receive(){
+	public byte[] remove() {
 		return receivedMessages.poll();
+	}
+	
+	public byte[] readMessage(){
+		return receivedMessages.peek();
 	}
 }

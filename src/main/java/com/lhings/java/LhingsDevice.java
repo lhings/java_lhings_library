@@ -31,8 +31,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.json.JSONException;
@@ -96,17 +97,18 @@ public abstract class LhingsDevice {
 	private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
 	private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
 	private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
-	private static final String VERSION_STRING = "Lhings Java SDK v2.4 - ja010";
+	private static final String VERSION_STRING = "Lhings Java SDK v2.4.1 - ja011";
 	private static boolean customizationsAvailable;
 	private static JSONObject customizations;
-
+	private static ScheduledExecutorService sharedTimer;
+	
 	private final Map<String, MethodOrFieldToInstanceMapper> actionMethods = new HashMap<String, MethodOrFieldToInstanceMapper>();
 	private final Map<String, com.lhings.java.model.Action> actionDefinitions = new HashMap<String, com.lhings.java.model.Action>();
 	private final Map<String, MethodOrFieldToInstanceMapper> statusFields = new HashMap<String, MethodOrFieldToInstanceMapper>();
 	private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
 	private final List<String> eventDefinitions = new ArrayList<String>();
 	
-	private Timer timer = new Timer();
+	
 	private SocketManager socketMan;
 
 	static {
@@ -154,6 +156,8 @@ public abstract class LhingsDevice {
 	private float loopFrequency = 10;
 
 	private List<Feature> features = new ArrayList<Feature>();
+	
+	private int threads = 1;
 
 	private Map<String, Integer> incrementalCountersForName = new HashMap<String, Integer>();
 	private int port;
@@ -526,27 +530,21 @@ public abstract class LhingsDevice {
 			feature.setup();
 		postman = ListenerThread.getInstance(this, socketMan);
 		
-		TimerTask changeThreadName = new TimerTask(){
-			@Override
-			public void run(){
-				Thread.currentThread().setName("thr-main-" + uuid.substring(0, 5));
-			}
-		};
-		timer = new Timer();
-		timer.schedule(changeThreadName, 0);
+		if (sharedTimer == null) {
+			sharedTimer = Executors.newScheduledThreadPool(threads);
+			log.info("Initialized shared timer with " + threads + " execution threads.");
+		}
 		
 		sendDescriptor();
 		if (!startSession())
 			return;
-		TimerTask keepAliveTask = new TimerTask(){
-			@Override
+		Runnable keepAliveTask = new Runnable(){
 			public void run(){
 				sendKeepAlive();
 			}
 		};
 		
-		TimerTask loopTask = new TimerTask(){
-			@Override
+		Runnable loopTask = new Runnable(){
 			public void run(){
 				launchLoop();
 			}
@@ -554,10 +552,8 @@ public abstract class LhingsDevice {
 		
 		long loopDelay = (long) (1000/loopFrequency);
 		
-		
-		timer.schedule(keepAliveTask, 0, TIME_BETWEEN_KEEPALIVES_MILLIS);
-		timer.schedule(loopTask, 1000, loopDelay);
-//		(new Thread(this)).start();
+		sharedTimer.scheduleWithFixedDelay(keepAliveTask, 0, TIME_BETWEEN_KEEPALIVES_MILLIS, TimeUnit.MILLISECONDS);
+		sharedTimer.scheduleWithFixedDelay(loopTask, 1000, loopDelay, TimeUnit.MILLISECONDS);
 		log.info("Device started");
 	}
 
@@ -587,7 +583,7 @@ public abstract class LhingsDevice {
 		} catch (LhingsException e) {
 			log.warn("Session could not be ended due to bad credentials, bad request, or the device was deleted on server side while online");
 		}
-		timer.cancel();
+		sharedTimer.shutdownNow();
 		log.info("Successfully stopped device.");
 	}
 
@@ -1202,6 +1198,21 @@ public abstract class LhingsDevice {
 			this.socketMan = socketMan;
 		else
 			throw new IllegalStateException("SocketManager already initialized. setSocketMan() can only be called once, and it must be done before calling start().");
+	}
+
+
+	public void setThreads(int threads) {
+		if(threads <= 1) {
+			log.warn("Number of threads cannot be lees than 1, " + threads + " given. Defaulting to 1.");
+			return;
+		}
+		
+		if (sharedTimer != null) {
+			log.warn("Changing the number of threads after the first device has started has no effect.");
+			return;
+		}
+			
+		this.threads = threads;
 	}
 
 	

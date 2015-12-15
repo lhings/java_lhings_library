@@ -61,7 +61,7 @@ import com.lhings.java.model.Device;
 import com.lhings.java.model.MethodOrFieldToInstanceMapper;
 import com.lhings.java.pushprotocol.ListenerThread;
 import com.lhings.java.pushprotocol.SocketManager;
-import com.lhings.java.pushprotocol.UDPSocketManager;
+import com.lhings.java.pushprotocol.TCPSocketManager;
 import com.lhings.java.stun.LyncnatProtocol;
 import com.lhings.java.stun.STUNMessage;
 import com.lhings.java.stun.STUNMessageFactory;
@@ -100,7 +100,7 @@ public abstract class LhingsDevice {
 	private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
 	private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
 	private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
-	private static final String VERSION_STRING = "Lhings Java SDK v2.4.1 - ja011";
+	private static final String VERSION_STRING = "Lhings Java SDK v2.4.1 - ja010";
 	private static boolean customizationsAvailable;
 	private static JSONObject customizations;
 	private static ScheduledExecutorService sharedTimer;
@@ -111,7 +111,7 @@ public abstract class LhingsDevice {
 	private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
 	private final List<String> eventDefinitions = new ArrayList<String>();
 
-	private ScheduledFuture keepAliveScheduler, loopScheduler; 
+	private ScheduledFuture<?> keepAliveScheduler, loopScheduler; 
 	
 	private SocketManager socketMan;
 
@@ -528,8 +528,8 @@ public abstract class LhingsDevice {
 	public void start() throws LhingsException {
 		setup();
 		if (socketMan == null)
-			socketMan = (SocketManager) new UDPSocketManager(); // defaulting to
-																// UDP
+			socketMan = (SocketManager) new TCPSocketManager(); // defaulting to
+																// TCP
 																// communication
 		for (Feature feature : features)
 			feature.setup();
@@ -1210,8 +1210,8 @@ public abstract class LhingsDevice {
 	}
 
 	public void setThreads(int threads) {
-		if (threads <= 1) {
-			log.warn("Number of threads cannot be lees than 1, " + threads + " given. Defaulting to 1.");
+		if (threads < 1) {
+			log.warn("Number of threads cannot be less than 1, " + threads + " given. Defaulting to 1.");
 			return;
 		}
 
@@ -1219,7 +1219,7 @@ public abstract class LhingsDevice {
 			log.warn("Changing the number of threads after the first device has started has no effect.");
 			return;
 		}
-
+		log.info("Setting number of threads to " + threads + " as requested.");
 		this.threads = threads;
 	}
 

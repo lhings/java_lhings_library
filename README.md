@@ -11,7 +11,7 @@ Maven is used for development, compile with `mvn compile`. To generate a jar fil
 	<dependency>
 		<groupId>com.lhings.java</groupId>
 		<artifactId>lhings-java</artifactId>
-		<version>2.1</version>
+		<version>2.4.1</version>
 	</dependency>
 
 To learn how to develop with this library read the [quick start tutorial](http://support.lhings.com/Getting-started-tutorial.html) and the [javadoc](http://lhings.github.io/java_lhings_library/). You can find further help in:

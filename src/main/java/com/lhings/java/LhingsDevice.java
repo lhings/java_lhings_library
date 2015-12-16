@@ -600,11 +600,21 @@ public abstract class LhingsDevice {
 			}
 			message = STUNMessage.getSTUNMessage(rawMessage);
 			if (message == null) {
+				log.warn("Could not process message from server: not well formed.");
+				postman.remove();
 				return;
 			}
-			UUID messageUuid = UUIDUtil.uuid(message.getAttribute(LyncnatProtocol.attrLyncportId));
-			if (!this.uuid.equalsIgnoreCase(messageUuid.toString()))
+			byte[] uuidBytes = message.getAttribute(LyncnatProtocol.attrLyncportId);
+			if (uuidBytes == null) {
+				log.warn("Could not process message from server: null UUID returned from server");
+				postman.remove();
 				return;
+			}
+			UUID messageUuid = UUIDUtil.uuid(uuidBytes);
+			if (!this.uuid.equalsIgnoreCase(messageUuid.toString())) {
+				// return but do not remove, message could be addressed to other device
+				return;
+			}
 			postman.remove(); 
 		}
 		log.debug("Processing message");

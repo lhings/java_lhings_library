@@ -562,6 +562,15 @@ public abstract class LhingsDevice {
 		log.info("Device started");
 	}
 
+	
+	public void setSettings(Map <String, Object> data) throws IOException, LhingsException {
+		WebServiceCom.setCloudData(this, data);
+	}
+	
+	public String getSettings() throws IOException, LhingsException {
+		return WebServiceCom.getCloudData(this);
+	}
+	
 	private void launchLoop() {
 		loop();
 		for (Feature feature : features) {

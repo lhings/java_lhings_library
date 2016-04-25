@@ -85,10 +85,6 @@ public class SSLSocketManager implements SocketManager{
 
 	}
 
-	// DONDE lanzar el server local y modificar temperature sensor para que use
-	// TCP como
-	// socket manager y probar si funciona correctamente.
-
 	public byte[] receive() {
 		messageLength = -1;
 		while (true) {

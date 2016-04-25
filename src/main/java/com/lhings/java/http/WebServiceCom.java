@@ -340,6 +340,50 @@ public final class WebServiceCom {
 			return false;
 	}
 
+	/**
+	 * Store permanent data in the cloud.
+	 * @param lhingsDevice
+	 * @param data
+	 * @return
+	 * @throws IOException
+	 * @throws LhingsException
+	 */
+	public static boolean setCloudData(LhingsDevice lhingsDevice,
+			Map<String, Object> data) throws IOException, LhingsException {
+		String url = LHINGS_V1_API_PREFIX + "devices/" + lhingsDevice.uuid()
+				+ "/settings";
+		String apikey = lhingsDevice.apiKey();
+		String requestBody = new JSONObject(data).toString();
+		String response = executePost(apikey, url, requestBody);
+		int responseStatus = new JSONObject(response).getInt("responseStatus");
+		if (responseStatus == 201)
+			return true;
+		else
+			return false;
+	}
+	
+	public static String getCloudData(LhingsDevice lhingsDevice) throws IOException, LhingsException{
+		String url = LHINGS_V1_API_PREFIX + "devices/" + lhingsDevice.uuid()
+				+ "/settings/";
+		String apikey = lhingsDevice.apiKey();
+		String response = executeGet(url, apikey);
+		return response;
+		
+		
+	}
+	
+	/**
+	 * Ask other device to perform the named action.
+	 * 
+	 * @param deviceRequester
+	 * @param uuidDevicePerformer
+	 * @param actionName
+	 * @param arguments
+	 * @return
+	 * @throws IOException
+	 * @throws LhingsException
+	 */
+	
 	public static String requestAction(LhingsDevice deviceRequester,
 			String uuidDevicePerformer, String actionName,
 			Map<String, Object> arguments) throws IOException, LhingsException {

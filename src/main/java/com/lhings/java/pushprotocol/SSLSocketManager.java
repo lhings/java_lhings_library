@@ -15,7 +15,7 @@ import com.lhings.java.exception.LhingsException;
 import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.utils.ByteMan;
 
-public class SSLSocketManager implements SocketManager{
+public class SSLSocketManager extends AbstractSocketManager{
 
 	private static final int SOCKET_BUFFER_SIZE = 2048;
 	private static final String SERVER_HOSTNAME = "www.lhings.com";
@@ -71,6 +71,8 @@ public class SSLSocketManager implements SocketManager{
 	}
 
 	public void send(byte[] bytes) throws LhingsException {
+		if (!messageNeedsToBeSent(bytes))
+			return;
 		try {
 			out.write(bytes);
 		} catch (IOException e) {

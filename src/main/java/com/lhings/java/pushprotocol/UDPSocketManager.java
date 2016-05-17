@@ -14,7 +14,7 @@ import org.apache.log4j.Logger;
 import com.lhings.java.exception.LhingsException;
 import com.lhings.java.logging.LhingsLogger;
 
-public class UDPSocketManager implements SocketManager {
+public class UDPSocketManager extends AbstractSocketManager {
 
 	private static final int SOCKET_BUFFER_SIZE = 2048;
 	private static final String SERVER_HOSTNAME = "www.lhings.com";

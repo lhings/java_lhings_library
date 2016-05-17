@@ -13,7 +13,7 @@ import com.lhings.java.exception.LhingsException;
 import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.utils.ByteMan;
 
-public class TCPSocketManager implements SocketManager {
+public class TCPSocketManager extends AbstractSocketManager {
 
 	private static final int SOCKET_BUFFER_SIZE = 2048;
 	private static final String SERVER_HOSTNAME = "www.lhings.com";
@@ -63,7 +63,11 @@ public class TCPSocketManager implements SocketManager {
 		log.info("Device socket ready, bound to port " + clientPort);
 	}
 
+	
 	public void send(byte[] bytes) throws LhingsException {
+		if (!messageNeedsToBeSent(bytes))
+			return;
+		
 		try {
 			out.write(bytes);
 		} catch (IOException e) {
@@ -77,10 +81,6 @@ public class TCPSocketManager implements SocketManager {
 		}
 
 	}
-
-	// DONDE lanzar el server local y modificar temperature sensor para que use
-	// TCP como
-	// socket manager y probar si funciona correctamente.
 
 	public byte[] receive() {
 		messageLength = -1;

@@ -20,13 +20,14 @@ import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Scanner;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.lhings.java.logging.LhingsLogger;
 
 public class Config {
-	protected static final Logger log = LhingsLogger.getLogger();
 
+	private static final Logger log = LoggerFactory.getLogger(Config.class);
+	
 	public static HashMap<String, Object> configProperties = new HashMap<String, Object>();
 
 	static {

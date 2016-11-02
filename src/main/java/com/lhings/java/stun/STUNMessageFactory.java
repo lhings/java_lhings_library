@@ -27,11 +27,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
-import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.model.Action;
 import com.lhings.java.model.Argument;
 import com.lhings.java.model.ArgumentType;
@@ -56,7 +55,7 @@ import com.lhings.java.utils.Config;
 
 public class STUNMessageFactory {
 
-	private static Logger log = LhingsLogger.getLogger();
+	private static final Logger log = LoggerFactory.getLogger(STUNMessageFactory.class);
 	private String apiKey;
 	
 	public STUNMessageFactory(){}
@@ -186,7 +185,7 @@ public class STUNMessageFactory {
 				attrs.put(LyncnatProtocol.attrUsername,
 						username.getBytes("utf-8"));
 			} catch (UnsupportedEncodingException e) {
-				log.log(Level.ERROR, "Unsupported encoding", e);
+				log.error("Unsupported encoding", e);
 			}
 		}
 		STUNMessage mResponse = getSTUNMessage(STUNMessage.CL_SUCCESS, mType,
@@ -541,7 +540,7 @@ public class STUNMessageFactory {
 			attrs.put(LyncnatProtocol.attrName, name.getBytes("utf-8"));
 			attrs.put(LyncnatProtocol.attrPayload, payload.getBytes("utf-8"));
 		} catch (UnsupportedEncodingException ex) {
-			log.log(Level.ERROR, "Unsupported encoding", ex);
+			log.error("Unsupported encoding", ex);
 			return null;
 		}
 		return getSTUNMessage(STUNMessage.CL_REQUEST, LyncnatProtocol.mEvent,
@@ -554,7 +553,7 @@ public class STUNMessageFactory {
 		try {
 			attrs.put(LyncnatProtocol.attrEventName, feedName.getBytes("utf-8"));
 		} catch (UnsupportedEncodingException ex) {
-			log.log(Level.ERROR, "Unsupported encoding", ex);
+			log.error("Unsupported encoding", ex);
 			return null;
 		}
 		int method;
@@ -775,7 +774,7 @@ public class STUNMessageFactory {
 					}
 				}
 			} catch (UnsupportedEncodingException ex) {
-				log.log(Level.ERROR, "Unsupported encoding", ex);
+				log.error("Unsupported encoding", ex);
 				return null;
 			}
 

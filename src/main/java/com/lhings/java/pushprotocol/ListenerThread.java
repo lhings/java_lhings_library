@@ -13,21 +13,22 @@
  * limitations under the License. 
  */
 
-
 package com.lhings.java.pushprotocol;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.lhings.java.LhingsDevice;
 import com.lhings.java.exception.LhingsException;
-import com.lhings.java.logging.LhingsLogger;
 
 public class ListenerThread implements Runnable {
 
-	private static Logger log = LhingsLogger.getLogger();
+	private static Logger log = LoggerFactory.getLogger(ListenerThread.class);
 	private static ListenerThread instance;
 	private BlockingQueue<byte[]> receivedMessages = new LinkedBlockingQueue<byte[]>();
 	private BlockingQueue<byte[]> messagesToSend = new LinkedBlockingQueue<byte[]>();
@@ -68,24 +69,27 @@ public class ListenerThread implements Runnable {
 	public void run() {
 		// main listening loop
 		while (running) {
-			byte[] messageReceived = null;
-			messageReceived = socketMan.receive();
-			 
-			
-			if (messageReceived != null){
-				// store message for main device thread consumption
-				receivedMessages.add(messageReceived);
-			}
-			
-			// read new message to send, if any
-			byte[] messageSent = messagesToSend.poll();
-			if (messageSent == null)
-				continue;
-			
 			try {
+				byte[] messageReceived = null;
+				messageReceived = socketMan.receive();
+
+				if (messageReceived != null) {
+					// store message for main device thread consumption
+					receivedMessages.add(messageReceived);
+				}
+				// read new message to send, if any
+				byte[] messageSent = messagesToSend.poll();
+				
+				if (messageSent == null)
+					continue;
+				
 				socketMan.send(messageSent);
 			} catch (LhingsException ex) {
-				log.error("Network error sending message to server.");
+				log.error("Network error sending message to server: {}", ex.getMessage());
+			} catch (Exception ex) {
+				StringWriter sw = new StringWriter();
+				ex.printStackTrace(new PrintWriter(sw));
+				log.error("Unexpected exception in ListenerThread. See stack trace for details. \n {}", sw.toString());
 			}
 		}
 
@@ -95,15 +99,15 @@ public class ListenerThread implements Runnable {
 		running = false;
 	}
 
-	public void send(byte[] message){
+	public void send(byte[] message) {
 		messagesToSend.add(message);
 	}
 
 	public byte[] remove() {
 		return receivedMessages.poll();
 	}
-	
-	public byte[] readMessage(){
+
+	public byte[] readMessage() {
 		return receivedMessages.peek();
 	}
 }

@@ -7,10 +7,10 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.lhings.java.exception.LhingsException;
-import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.utils.ByteMan;
 
 public class TCPSocketManager extends AbstractSocketManager {
@@ -20,8 +20,8 @@ public class TCPSocketManager extends AbstractSocketManager {
 	private static final int SERVER_PORT = 3479;
 	private static final int RECONNECT_RETRY_MAX_INTERVAL = 20000;
 	private static final int RECONNECT_RETRY_INTERVAL = 100;
-	private static Logger log = LhingsLogger.getLogger();
-
+	private static final Logger log = LoggerFactory.getLogger(TCPSocketManager.class);
+	
 	private ByteArrayOutputStream readBuffer = new ByteArrayOutputStream(SOCKET_BUFFER_SIZE);
 	private InputStream in;
 	private OutputStream out;
@@ -65,8 +65,9 @@ public class TCPSocketManager extends AbstractSocketManager {
 
 	
 	public void send(byte[] bytes) throws LhingsException {
-		if (!messageNeedsToBeSent(bytes))
+		if (!messageNeedsToBeSent(bytes)) {
 			return;
+		}
 		
 		try {
 			out.write(bytes);
@@ -79,7 +80,6 @@ public class TCPSocketManager extends AbstractSocketManager {
 			log.info("Connecting again...");
 			connect();
 		}
-
 	}
 
 	public byte[] receive() {

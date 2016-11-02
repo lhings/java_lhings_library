@@ -23,10 +23,8 @@ import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
-import com.lhings.java.logging.LhingsLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides static methods for the manipulation of sequences of bits
@@ -39,8 +37,8 @@ import com.lhings.java.logging.LhingsLogger;
  */
 public class ByteMan {
 
-	private static Logger log = LhingsLogger.getLogger();
-
+	private static final Logger log = LoggerFactory.getLogger(ByteMan.class);
+	
 	public static String byteArrayToHexString(byte[] m) {
 		return Hex.encodeHexString(m);
 	}
@@ -128,7 +126,7 @@ public class ByteMan {
 		try {
 			md = MessageDigest.getInstance("SHA-1");
 		} catch (NoSuchAlgorithmException e) {
-			log.log(Level.ERROR, "Error while working out SHA-1 hash", e);
+			log.error("Error while working out SHA-1 hash", e);
 			return null;
 		}
 		return md.digest(bytes);

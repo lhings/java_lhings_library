@@ -18,6 +18,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
@@ -37,9 +39,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
 import com.lhings.java.annotations.Action;
@@ -55,7 +58,6 @@ import com.lhings.java.exception.InitializationException;
 import com.lhings.java.exception.LhingsException;
 import com.lhings.java.exception.UnauthorizedException;
 import com.lhings.java.http.WebServiceCom;
-import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.model.Argument;
 import com.lhings.java.model.Device;
 import com.lhings.java.model.MethodOrFieldToInstanceMapper;
@@ -93,7 +95,7 @@ import com.lhings.java.utils.Config;
  */
 public abstract class LhingsDevice {
 
-	protected static final Logger log = LhingsLogger.getLogger();
+	protected static final Logger log = LoggerFactory.getLogger(LhingsDevice.class);
 	protected static final Properties uuids;
 	private static final File fileUuids = new File("uuid.list");
 	private static final File fileCustomizations = new File("customizations.json");
@@ -111,8 +113,8 @@ public abstract class LhingsDevice {
 	private final Map<String, com.lhings.java.model.StatusComponent> statusDefinitions = new HashMap<String, com.lhings.java.model.StatusComponent>();
 	private final List<String> eventDefinitions = new ArrayList<String>();
 
-	private ScheduledFuture<?> keepAliveScheduler, loopScheduler; 
-	
+	private ScheduledFuture<?> keepAliveScheduler, loopScheduler;
+
 	private SocketManager socketMan;
 
 	static {
@@ -127,7 +129,7 @@ public abstract class LhingsDevice {
 				uuids.load(reader);
 			}
 		} catch (IOException ex) {
-			log.fatal("Device list file could not be opened. Exiting.");
+			log.error("Device list file could not be opened. Exiting.");
 			System.exit(1);
 		}
 		if (!fileCustomizations.exists()) {
@@ -550,6 +552,7 @@ public abstract class LhingsDevice {
 		};
 
 		Runnable loopTask = new Runnable() {
+
 			public void run() {
 				launchLoop();
 			}
@@ -562,25 +565,25 @@ public abstract class LhingsDevice {
 		log.info("Device started");
 	}
 
-	
-	public void setSettings(Map <String, Object> data) throws IOException, LhingsException {
+	public void setSettings(Map<String, Object> data) throws IOException, LhingsException {
 		WebServiceCom.setCloudData(this, data);
 	}
-	
+
 	public String getSettings() throws IOException, LhingsException {
 		return WebServiceCom.getCloudData(this);
 	}
-	
-	private void launchLoop() {
-		loop();
-		for (Feature feature : features) {
-			feature.loopEvery();
-		}
 
+	private void launchLoop() {
 		try {
+			loop();
+			for (Feature feature : features) {
+				feature.loopEvery();
+			}
 			processMessage();
-		} catch (ActionExecutionException e) {
-			e.printStackTrace();
+		} catch (Exception e) {
+			StringWriter sw = new StringWriter();
+			e.printStackTrace(new PrintWriter(sw));
+			log.error("Unexpected exception thrown while processing message: {}. See stack trace for further details. \n {}", e.getMessage(), sw.toString());
 		}
 	}
 
@@ -597,7 +600,7 @@ public abstract class LhingsDevice {
 		}
 		keepAliveScheduler.cancel(true);
 		loopScheduler.cancel(true);
-		log.info("Successfully stopped device "+ this.getName() + ".");
+		log.info("Successfully stopped device " + this.getName() + ".");
 	}
 
 	private void processMessage() throws ActionExecutionException {
@@ -621,10 +624,11 @@ public abstract class LhingsDevice {
 			}
 			UUID messageUuid = UUIDUtil.uuid(uuidBytes);
 			if (!this.uuid.equalsIgnoreCase(messageUuid.toString())) {
-				// return but do not remove, message could be addressed to other device
+				// return but do not remove, message could be addressed to other
+				// device
 				return;
 			}
-			postman.remove(); 
+			postman.remove();
 		}
 		log.debug("Processing message");
 
@@ -723,11 +727,11 @@ public abstract class LhingsDevice {
 		} catch (IOException e) {
 			log.warn(e.getMessage());
 		} catch (DeviceDoesNotExistException ex) {
-			log.fatal("Unable to send event "
+			log.error("Unable to send event "
 					+ name
 					+ ". Device with uuid is not recognized by the server. Did you delete it on Lhings? Remove the appropriate entry from file uuid.list and try again. Exiting.");
 		} catch (UnauthorizedException ex) {
-			log.fatal("Unauthorized. Unable to send event " + name
+			log.error("Unauthorized. Unable to send event " + name
 					+ " to server: provided credentials (either api key or username/password) are not valid. Exiting.");
 		} catch (LhingsException e) {
 			log.warn(e.getMessage());
@@ -848,10 +852,10 @@ public abstract class LhingsDevice {
 		} catch (IOException e) {
 			log.warn(e.getMessage());
 		} catch (DeviceDoesNotExistException ex) {
-			log.fatal("Unable to connect device to Lhings. Device is not recognized by the server. Did you delete it on Lhings? Remove the appropriate entry from file uuid.list and try again. Exiting.");
+			log.error("Unable to connect device to Lhings. Device is not recognized by the server. Did you delete it on Lhings? Remove the appropriate entry from file uuid.list and try again. Exiting.");
 			this.stop();
 		} catch (UnauthorizedException ex) {
-			log.fatal("Unauthorized. Unable to connect device to server: provided credentials (either api key or username/password) are not valid. Exiting.");
+			log.error("Unauthorized. Unable to connect device to server: provided credentials (either api key or username/password) are not valid. Exiting.");
 			this.stop();
 		} catch (LhingsException e) {
 			log.warn(e.getMessage());
@@ -875,11 +879,11 @@ public abstract class LhingsDevice {
 			} catch (IOException e) {
 				log.warn(e.getMessage());
 			} catch (DeviceDoesNotExistException ex) {
-				log.fatal("Unable to connect device to Lhings. Device is not recognized by the server. Did you delete it on Lhings? Remove the appropriate entry from file uuid.list and try again. Exiting.");
+				log.error("Unable to connect device to Lhings. Device is not recognized by the server. Did you delete it on Lhings? Remove the appropriate entry from file uuid.list and try again. Exiting.");
 				this.stop();
 				return false;
 			} catch (UnauthorizedException ex) {
-				log.fatal("Unauthorized. Unable to connect device with uuid to server: provided credentials (either api key or username/password) are not valid. Exiting.");
+				log.error("Unauthorized. Unable to connect device with uuid to server: provided credentials (either api key or username/password) are not valid. Exiting.");
 				this.stop();
 				return false;
 			} catch (LhingsException e) {

@@ -9,10 +9,10 @@ import java.net.SocketTimeoutException;
 
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.lhings.java.exception.LhingsException;
-import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.utils.ByteMan;
 
 public class SSLSocketManager extends AbstractSocketManager{
@@ -22,8 +22,8 @@ public class SSLSocketManager extends AbstractSocketManager{
 	private static final int SERVER_PORT = 3480;
 	private static final int RECONNECT_RETRY_MAX_INTERVAL = 20000;
 	private static final int RECONNECT_RETRY_INTERVAL = 100;
-	private static Logger log = LhingsLogger.getLogger();
-
+	private static final Logger log = LoggerFactory.getLogger(SSLSocketManager.class);
+	
 	private ByteArrayOutputStream readBuffer = new ByteArrayOutputStream(SOCKET_BUFFER_SIZE);
 	private InputStream in;
 	private OutputStream out;

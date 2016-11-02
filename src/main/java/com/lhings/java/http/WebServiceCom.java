@@ -33,16 +33,16 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.lhings.java.LhingsDevice;
 import com.lhings.java.exception.BadRequestException;
 import com.lhings.java.exception.DeviceDoesNotExistException;
 import com.lhings.java.exception.LhingsException;
 import com.lhings.java.exception.UnauthorizedException;
-import com.lhings.java.logging.LhingsLogger;
 import com.lhings.java.model.Device;
 import com.lhings.java.model.NameValueBean;
 
@@ -63,7 +63,7 @@ public final class WebServiceCom {
 	}
 
 	@SuppressWarnings("unused")
-	private static Logger log = LhingsLogger.getLogger();
+	private static Logger log = LoggerFactory.getLogger(WebServiceCom.class);
 	private static final String LHINGS_V1_API_PREFIX = "https://www.lhings.com/laas/api/v1/";
 	private static final int LHINGS_ERROR_HTTP_STATUS = 457;
 	private static final int LHINGS_V1_API_BAD_REQUEST_ERROR_CODE = 400;

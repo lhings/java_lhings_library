@@ -14,7 +14,7 @@ def MAX_LOG_HISTORY = 10
 def LOG_FILENAME = "logback"
 
 // Pattern used for logging
-def PATTERN = "%d{HH-mm-ss.SSS} [%10.10thread] %5level in %-30logger{30} - %msg%n"
+def PATTERN = "%d{HH:mm:ss.SSS} [%10.10thread] %5level in %-30logger{30} - %msg%n"
 
 
 
@@ -47,6 +47,6 @@ appender("ROLLING-FILE", RollingFileAppender){
 }
 
 root(ROOT_LOGGER_LOG_LEVEL, ["CONSOLE", "ROLLING-FILE"])
-loggers.each{ loggerName, loggerLevel -> logger(loggerName, loggerLevel, ["CONSOLE", "ROLLING-FILE"]) }
+loggers.each{ loggerName, loggerLevel -> logger(loggerName, loggerLevel, ["CONSOLE", "ROLLING-FILE"], false) }
 
 

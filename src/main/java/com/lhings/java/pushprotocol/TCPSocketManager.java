@@ -48,8 +48,7 @@ public class TCPSocketManager extends AbstractSocketManager {
 				clientPort = socket.getLocalPort();
 				connected = true;
 			} catch (IOException e) {
-				log.warn("Unable to connect. Retrying in " + interval + " ms");
-				log.debug("Connection failed, see stack trace for details", e);
+				log.warn("Unable to connect. Retrying in " + interval + " ms. Reason: [{}: {}]", e.getClass(), e.getMessage());
 				try {
 					Thread.sleep(interval);
 				} catch (InterruptedException e1) {
@@ -60,7 +59,7 @@ public class TCPSocketManager extends AbstractSocketManager {
 					interval = RECONNECT_RETRY_MAX_INTERVAL;
 			}
 		}
-		log.info("Device socket ready, bound to port " + clientPort);
+		log.info("Device socket ready, bound to port {}", clientPort);
 	}
 
 	
@@ -70,11 +69,12 @@ public class TCPSocketManager extends AbstractSocketManager {
 		}
 		
 		try {
+			checkKeepaliveTimeout();
 			out.write(bytes);
 		} catch (IOException e) {
-			log.error("Write failed, closing socket", e);
+			log.error("Write failed, closing socket. Reason: [{}: {}]", e.getClass(), e.getMessage());
 			try {
-				out.close();
+				socket.close();
 			} catch (IOException e1) {
 			}
 			log.info("Connecting again...");
@@ -92,7 +92,7 @@ public class TCPSocketManager extends AbstractSocketManager {
 				// socket timed out and message is not read in its entirety
 				return null;
 			} catch (IOException e) {
-				log.error("Exception while reading, closing socket", e);
+				log.error("Exception while reading, closing socket. Reason: [{}: {}]", e.getClass(), e.getMessage());
 				break;
 			}
 			if (byteread == -1) { // stream closed
@@ -108,11 +108,12 @@ public class TCPSocketManager extends AbstractSocketManager {
 				byte[] bytes = readBuffer.toByteArray();
 				messageLength = -1;
 				readBuffer.reset();
+				isKeepAliveMessageAnswer(bytes);
 				return bytes;
 			}
 		}
 		try {
-			in.close();
+			socket.close();
 		} catch (IOException e) {
 
 		}
@@ -129,7 +130,7 @@ public class TCPSocketManager extends AbstractSocketManager {
 		try {
 			socket.close();
 		} catch (IOException e) {
-			log.error("Unable to close socket.", e);
+			log.error("Unable to close socket. Reason: [{}: {}]", e.getClass(), e.getMessage());
 		}
 	}
 

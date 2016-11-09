@@ -1,5 +1,6 @@
 package com.lhings.java.pushprotocol;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -9,8 +10,24 @@ import com.lhings.java.stun.STUNMessage;
 
 public abstract class AbstractSocketManager implements SocketManager {
 
+	protected final static long keepaliveTimeout = 3 * 60 * 1000; // 3 minutes
+	
+	protected Long timeLastKeepaliveAnswerWasReceived;
+	
 	protected static String uuidFirstKeepalive;
 	protected Set<String> managedUuids = new HashSet<String>();
+	
+	protected boolean isKeepAliveMessageAnswer(byte[] bytes) {
+		STUNMessage m = STUNMessage.getSTUNMessage(bytes);
+		int method = m.getMethod();
+		int messageClass = m.getMessageClass();
+		if (method == LyncnatProtocol.mKeepAlive && (messageClass == STUNMessage.CL_SUCCESS || messageClass == STUNMessage.CL_ERROR)) {
+			timeLastKeepaliveAnswerWasReceived = System.currentTimeMillis();
+			return true;
+		}
+		else
+			return false;
+	}
 	
 	protected boolean messageNeedsToBeSent(byte[] bytes) {
 		STUNMessage m = STUNMessage.getSTUNMessage(bytes);
@@ -36,4 +53,14 @@ public abstract class AbstractSocketManager implements SocketManager {
 		
 	}
 
+	protected void checkKeepaliveTimeout() throws IOException {
+		if (timeLastKeepaliveAnswerWasReceived != null) {
+			long timeSinceLastKeepaliveAck = System.currentTimeMillis() - timeLastKeepaliveAnswerWasReceived;
+			if (timeSinceLastKeepaliveAck > keepaliveTimeout) {
+				timeLastKeepaliveAnswerWasReceived = null;
+				throw new IOException("Too much time without news from server, connection seems to be down. Reconnecting...");
+			}
+		}
+	}
+	
 }

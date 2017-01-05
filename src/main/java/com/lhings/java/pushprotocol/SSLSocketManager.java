@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.lhings.java.exception.LhingsException;
 import com.lhings.java.utils.ByteMan;
 
-public class SSLSocketManager extends AbstractSocketManager{
+public class SSLSocketManager extends AbstractSocketManager {
 
 	private static final int SOCKET_BUFFER_SIZE = 2048;
 	private static final String SERVER_HOSTNAME = "www.lhings.com";
@@ -23,7 +23,7 @@ public class SSLSocketManager extends AbstractSocketManager{
 	private static final int RECONNECT_RETRY_MAX_INTERVAL = 20000;
 	private static final int RECONNECT_RETRY_INTERVAL = 100;
 	private static final Logger log = LoggerFactory.getLogger(SSLSocketManager.class);
-	
+
 	private ByteArrayOutputStream readBuffer = new ByteArrayOutputStream(SOCKET_BUFFER_SIZE);
 	private InputStream in;
 	private OutputStream out;
@@ -35,7 +35,7 @@ public class SSLSocketManager extends AbstractSocketManager{
 	public SSLSocketManager() {
 		System.setProperty("javax.net.ssl.trustStore", "./lhings-java.keystore");
 	}
-	
+
 	public void init() throws LhingsException {
 		connect();
 	}
@@ -67,6 +67,12 @@ public class SSLSocketManager extends AbstractSocketManager{
 			}
 		}
 		log.info("Device socket ready, bound to port {}", clientPort);
+		// after connection success we empty manageUuids so that all devices
+		// are allowed again to send one keepalive to allow the server to
+		// associate a TCP worker to them (fixes issue #129 in
+		// bitbucket/openiusadmin)
+		log.info("Clearing managed uuids list to allow all devices to send one keepalive.");
+		managedUuids.clear();
 	}
 
 	public void send(byte[] bytes) throws LhingsException {

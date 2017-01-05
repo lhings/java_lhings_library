@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.uuid.impl.UUIDUtil;
 import com.lhings.java.stun.LyncnatProtocol;
 import com.lhings.java.stun.STUNMessage;
@@ -11,7 +14,8 @@ import com.lhings.java.stun.STUNMessage;
 public abstract class AbstractSocketManager implements SocketManager {
 
 	protected final static long keepaliveTimeout = 3 * 60 * 1000; // 3 minutes
-	
+	private static final Logger log = LoggerFactory.getLogger(AbstractSocketManager.class);
+
 	protected Long timeLastKeepaliveAnswerWasReceived;
 	
 	protected static String uuidFirstKeepalive;
@@ -38,14 +42,18 @@ public abstract class AbstractSocketManager implements SocketManager {
 		if (uuidFirstKeepalive == null) {
 			uuidFirstKeepalive = uuid;
 			managedUuids.add(uuid);
+			log.debug("Device {} will be the only one sending keepalives.", uuid);
 			return true;
 		}
 		
-		if (uuidFirstKeepalive.equals(uuid))
+		if (uuidFirstKeepalive.equals(uuid)) {
+			log.debug("Keepalive sent for device {}", uuid);
 			return true;
+		}
 		
 		if (!managedUuids.contains(uuid)) {
 			managedUuids.add(uuid);
+			log.debug("Keepalive allowed for device {}. No more keepalives will be allowed for this device.", uuid);
 			return true;
 		}
 		

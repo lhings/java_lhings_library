@@ -102,7 +102,7 @@ public abstract class LhingsDevice {
 	private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
 	private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
 	private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
-	private static final String VERSION_STRING = "Lhings Java SDK v2.4.3 - ja011";
+	private static final String VERSION_STRING = "Lhings Java SDK v2.4.4 - ja012";
 	private static boolean customizationsAvailable;
 	private static JSONObject customizations;
 	private static ScheduledExecutorService sharedTimer;

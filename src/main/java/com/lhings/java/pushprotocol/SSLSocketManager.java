@@ -12,6 +12,7 @@ import javax.net.ssl.SSLSocketFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.lhings.java.LhingsDevice;
 import com.lhings.java.exception.LhingsException;
 import com.lhings.java.utils.ByteMan;
 
@@ -71,8 +72,8 @@ public class SSLSocketManager extends AbstractSocketManager {
 		// are allowed again to send one keepalive to allow the server to
 		// associate a TCP worker to them (fixes issue #129 in
 		// bitbucket/openiusadmin)
-		log.info("Clearing managed uuids list to allow all devices to send one keepalive.");
-		managedUuids.clear();
+		log.info("Clearing keepalive success list to allow all devices to send one keepalive.");
+		keepaliveSuccess.clear();
 	}
 
 	public void send(byte[] bytes) throws LhingsException {

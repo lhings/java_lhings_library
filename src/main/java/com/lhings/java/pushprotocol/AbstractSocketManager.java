@@ -1,8 +1,7 @@
 package com.lhings.java.pushprotocol;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,8 @@ public abstract class AbstractSocketManager implements SocketManager {
 	protected Long timeLastKeepaliveAnswerWasReceived;
 	
 	protected static String uuidFirstKeepalive;
-	protected Set<String> managedUuids = new HashSet<String>();
+	protected ConcurrentHashMap<String, Boolean> keepaliveSuccess = new ConcurrentHashMap<String, Boolean>();
+//	protected Set<String> managedUuids = new HashSet<String>();
 	
 	protected boolean isKeepAliveMessageAnswer(byte[] bytes) {
 		STUNMessage m = STUNMessage.getSTUNMessage(bytes);
@@ -27,6 +27,10 @@ public abstract class AbstractSocketManager implements SocketManager {
 		int messageClass = m.getMessageClass();
 		if (method == LyncnatProtocol.mKeepAlive && (messageClass == STUNMessage.CL_SUCCESS || messageClass == STUNMessage.CL_ERROR)) {
 			timeLastKeepaliveAnswerWasReceived = System.currentTimeMillis();
+			String uuid = UUIDUtil.uuid(m.getAttribute(LyncnatProtocol.attrLyncportId)).toString();
+			keepaliveSuccess.put(uuid, Boolean.TRUE);
+			if(uuidFirstKeepalive != null && !uuid.equals(uuidFirstKeepalive))
+				log.debug("No more keepalives will be sent for device {}.", uuid);
 			return true;
 		}
 		else
@@ -41,8 +45,9 @@ public abstract class AbstractSocketManager implements SocketManager {
 		String uuid = UUIDUtil.uuid(m.getAttribute(LyncnatProtocol.attrLyncportId)).toString();
 		if (uuidFirstKeepalive == null) {
 			uuidFirstKeepalive = uuid;
-			managedUuids.add(uuid);
 			log.debug("Device {} will be the only one sending keepalives.", uuid);
+			log.debug("Keepalive sent for device {}", uuid);
+			keepaliveSuccess.put(uuid, Boolean.FALSE);
 			return true;
 		}
 		
@@ -51,11 +56,32 @@ public abstract class AbstractSocketManager implements SocketManager {
 			return true;
 		}
 		
-		if (!managedUuids.contains(uuid)) {
-			managedUuids.add(uuid);
-			log.debug("Keepalive allowed for device {}. No more keepalives will be allowed for this device.", uuid);
+		if (keepaliveSuccess.get(uuid) == null || keepaliveSuccess.get(uuid) == false) {
+			keepaliveSuccess.put(uuid, Boolean.FALSE);
+			log.debug("Keepalive sent for device {}", uuid);
 			return true;
 		}
+		
+//		if (uuidFirstKeepalive == null) {
+//			uuidFirstKeepalive = uuid;
+//			managedUuids.add(uuid);
+//			log.debug("Device {} will be the only one sending keepalives.", uuid);
+//			LhingsDevice.keepaliveResponses.put(m.getTransactionID(), info);
+//			return true;
+//		}
+//		
+//		if (uuidFirstKeepalive.equals(uuid)) {
+//			log.debug("Keepalive sent for device {}", uuid);
+//			LhingsDevice.keepaliveResponses.put(m.getTransactionID(), info);
+//			return true;
+//		}
+//		
+//		if (!managedUuids.contains(uuid)) {
+//			managedUuids.add(uuid);
+//			log.debug("Keepalive allowed for device {}. No more keepalives will be allowed for this device.", uuid);
+//			LhingsDevice.keepaliveResponses.put(m.getTransactionID(), info);
+//			return true;
+//		}
 		
 		return false;
 		

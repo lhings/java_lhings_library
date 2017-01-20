@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -67,6 +68,7 @@ import com.lhings.java.pushprotocol.TCPSocketManager;
 import com.lhings.java.stun.LyncnatProtocol;
 import com.lhings.java.stun.STUNMessage;
 import com.lhings.java.stun.STUNMessageFactory;
+import com.lhings.java.stun.TransactionID;
 import com.lhings.java.utils.ByteMan;
 import com.lhings.java.utils.Config;
 
@@ -102,7 +104,7 @@ public abstract class LhingsDevice {
 	private static final long TIME_BETWEEN_KEEPALIVES_MILLIS = 30000;
 	private static final long INITIAL_TIME_BETWEEN_STARTSESSION_RETRIES_MILLIS = 1000;
 	private static final String DEFAULT_DEVICE_TYPE = "lhings-java";
-	private static final String VERSION_STRING = "Lhings Java SDK v2.4.4 - ja012";
+	private static final String VERSION_STRING = "Lhings Java SDK v2.4.4 - ja013";
 	private static boolean customizationsAvailable;
 	private static JSONObject customizations;
 	private static ScheduledExecutorService sharedTimer;
@@ -116,7 +118,7 @@ public abstract class LhingsDevice {
 	private ScheduledFuture<?> keepAliveScheduler, loopScheduler;
 
 	private SocketManager socketMan;
-
+	
 	static {
 		System.out.println(VERSION_STRING);
 		uuids = new Properties();

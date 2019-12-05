@@ -26,7 +26,6 @@ To learn how to develop with this library read the [quick start tutorial](http:/
 * Latest news:
 	Twitter: http://twitter.com/lhings - Follow us: @Lhings
 
-* Blog: http://blog.lhings.com
 
 This library is licensed under the terms of the [Apache License v2.0](http://www.apache.org/licenses/LICENSE-2.0.html).
 
